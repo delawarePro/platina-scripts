@@ -121,7 +121,7 @@ steps:
 - task: PublishPipelineArtifact@1
   displayName: 'Attach artifacts to pipeline'
   inputs:
-    Path: '$(Build.ArtifactStagingDirectory)\packages'
-    ArtifactName: 'packages'
-    ArtifactType: Container
+    path: '$(Build.ArtifactStagingDirectory)\packages'
+    artifactName: 'packages'
+    artifactType: Container
   condition: and(succeeded(), eq(${{ parameters.WithPipelineArtifacts }}, 'true'))
