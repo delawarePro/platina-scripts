@@ -79,9 +79,6 @@ steps:
   inputs: 
     command: 'restore'
     projects: ${{ parameters.Solution }}
-    feedsToUse: 'config'
-    nugetConfigPath: ${{ parameters.NuGetConfigPath }}
-    externalFeedCredentials: ${{ parameters.ExternalFeedCredentials }}
 
 - task: DotNetCoreCLI@2
   displayName: 'DotNet Build'
