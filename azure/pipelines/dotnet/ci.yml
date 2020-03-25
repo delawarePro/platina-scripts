@@ -54,14 +54,14 @@ steps:
     packageType: 'sdk'
     version: ${{ parameters.DotNetSdkVersion }}
     includePreviewVersions: true
-  condition: and(succeeded(), ne(variables.DotNetSdkVersion, ''))
+  condition: ne(variables.DotNetSdkVersion, '')
 
 # dotnet restore does not yet work with external Azure Devops Artifacts: https://github.com/microsoft/azure-pipelines-tasks/issues/7160
 - task: NuGetToolInstaller@1
   displayName: 'Use specific NuGet tool ${{ parameters.NuGetToolVersion }}'
   inputs:
     versionSpec: ${{ parameters.NuGetToolVersion }}
-  condition: and(succeeded(), ne(${{ parameters.NoNuGetTool }}, 'true'))
+  condition: ne(${{ parameters.NoNuGetTool }}, 'true')
 
 - task: NuGetCommand@2
   displayName: 'NuGet restore'
@@ -71,7 +71,7 @@ steps:
     feedsToUse: 'config'
     nugetConfigPath: ${{ parameters.NuGetConfigPath }}
     externalFeedCredentials: ${{ parameters.ExternalFeedCredentials }}
-  condition: and(succeeded(), ne(${{ parameters.NoNuGetTool }}, 'true'))
+  condition:  ne(${{ parameters.NoNuGetTool }}, 'true')
 
 # dotnet restore still seems necessary, see https://stackoverflow.com/questions/48440223/assets-file-project-assets-json-not-found-run-a-nuget-package-restore
 - task: DotNetCoreCLI@2
