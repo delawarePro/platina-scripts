@@ -25,10 +25,10 @@ parameters:
   type: boolean
   default: false
   displayName: 'Whether to run ''dotnet package''.'
-- name: WithPipelineArtifacts
+- name: WithPublish
   type: boolean
   default: false
-  displayName: 'Whether to publish and add result to pipeline artifacts.'
+  displayName: 'Whether to run ''dotnet publish''.'
 
 - name: NoNuGetTool
   type: boolean
@@ -116,12 +116,4 @@ steps:
     publishWebProjects: false
     modifyOutputPath: false
     zipAfterPublish: false
-  condition: and(succeeded(), eq(${{ parameters.WithPipelineArtifacts }}, 'true'))
-
-- task: PublishPipelineArtifact@1
-  displayName: 'Attach artifacts to pipeline'
-  inputs:
-    path: '$(Build.ArtifactStagingDirectory)\packages'
-    artifactName: 'packages'
-    artifactType: Container
-  condition: and(succeeded(), eq(${{ parameters.WithPipelineArtifacts }}, 'true'))
+  condition: and(succeeded(), eq(${{ parameters.WithPublish }}, 'true'))
