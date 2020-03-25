@@ -14,7 +14,7 @@ parameters:
   displayName: 'Platform name to build.'
 - name: DotNetSdkVersion
   type: string
-  default: ''
+  default: 'none'
   displayName: 'Specifc .NET SDK version to use.'
 
 - name: NoTests
@@ -54,7 +54,7 @@ steps:
     packageType: 'sdk'
     version: ${{ parameters.DotNetSdkVersion }}
     includePreviewVersions: true
-  condition: ne(${{ parameters.DotNetSdkVersion }}, '')
+  condition: ne(${{ parameters.DotNetSdkVersion }}, 'none')
 
 # dotnet restore does not yet work with external Azure Devops Artifacts: https://github.com/microsoft/azure-pipelines-tasks/issues/7160
 - task: NuGetToolInstaller@1
