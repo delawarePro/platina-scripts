@@ -102,7 +102,7 @@ steps:
   displayName: 'DotNet Pack'
   inputs:
     command: 'pack'
-    packagesToPack: '$(solution)'
+    packagesToPack: ${{ parameters.Solution }}
     versioningScheme: 'off'
     arguments: '--configuration $(BuildConfiguration) --no-restore --no-build'
   condition: and(succeeded(), eq(${{ parameters.WithPack }}, 'true'))
