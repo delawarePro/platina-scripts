@@ -17,6 +17,10 @@ parameters:
   default: ''
   displayName: 'Specifc .NET SDK version to use.'
 
+- name: BeforeTestsSteps
+  type: stepList
+  default: []
+  displayName: 'Optional steps to execute before test execution.'
 - name: NoTests
   type: boolean
   default: false
@@ -95,6 +99,9 @@ steps:
     arguments: '--configuration ${{ parameters.BuildConfiguration }} /p:Platform="${{ parameters.BuildPlatform }}" --no-restore'
 
 - ${{ if ne(parameters.NoTests, 'true') }}:
+  - ${{ each step in parameters.BeforeTestsSteps }}:
+    - ${{ each pair in step }}:
+      ${{ pair.key }}: ${{ pair.value }}       
   - task: DotNetCoreCLI@2
     displayName: 'DotNet Test'
     inputs:
