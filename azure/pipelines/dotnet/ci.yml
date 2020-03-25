@@ -48,38 +48,49 @@ parameters:
   displayName: 'Names of external NuGet feed links. '
 
 steps:
-- task: UseDotNet@2
-  displayName: 'Use specific .NET SDK version ${{ parameters.DotNetSdkVersion }}'
-  inputs:
-    packageType: 'sdk'
-    version: ${{ parameters.DotNetSdkVersion }}
-    includePreviewVersions: true
-  condition: ne('${{ parameters.DotNetSdkVersion }}', '')
+- ${{ if ne(parameters.DotNetSdkVersion, '') }}:
+  - task: UseDotNet@2
+    displayName: 'Use specific .NET SDK version ${{ parameters.DotNetSdkVersion }}'
+    inputs:
+      packageType: 'sdk'
+      version: ${{ parameters.DotNetSdkVersion }}
+      includePreviewVersions: true
 
-# dotnet restore does not yet work with external Azure Devops Artifacts: https://github.com/microsoft/azure-pipelines-tasks/issues/7160
-- task: NuGetToolInstaller@1
-  displayName: 'Use specific NuGet tool ${{ parameters.NuGetToolVersion }}'
-  inputs:
-    versionSpec: ${{ parameters.NuGetToolVersion }}
-  condition: eq(${{ parameters.WithNuGetTool }}, 'true')
+- ${{ if eq(parameters.WithNuGetTool, 'false') }}:
+  - task: DotNetCoreCLI@2
+    displayName: 'DotNet Restore'
+    inputs: 
+      command: 'restore'
+      projects: ${{ parameters.Solution }}
 
-- task: NuGetCommand@2
-  displayName: 'NuGet restore'
-  inputs:
-    command: 'restore'
-    restoreSolution: ${{ parameters.Solution }}
-    feedsToUse: 'config'
-    nugetConfigPath: ${{ parameters.NuGetConfigPath }}
-    externalFeedCredentials: ${{ parameters.ExternalFeedCredentials }}
-  condition:  eq(${{ parameters.WithNuGetTool }}, 'true')
-
-# dotnet restore still seems necessary, see https://stackoverflow.com/questions/48440223/assets-file-project-assets-json-not-found-run-a-nuget-package-restore
-- task: DotNetCoreCLI@2
-  displayName: 'DotNet Restore'
-  inputs: 
-    command: 'restore'
-    projects: ${{ parameters.Solution }}
-
+- ${{ if eq(parameters.WithNuGetTool, 'true') }}:
+  # dotnet restore does not yet work with external Azure Devops Artifacts: https://github.com/microsoft/azure-pipelines-tasks/issues/7160
+  - task: NuGetToolInstaller@1
+    displayName: 'Use specific NuGet tool ${{ parameters.NuGetToolVersion }}'
+    inputs:
+      versionSpec: ${{ parameters.NuGetToolVersion }}
+    condition: eq(${{ parameters.WithNuGetTool }}, 'true')
+  
+  - task: NuGetCommand@2
+    displayName: 'NuGet restore'
+    inputs:
+      command: 'restore'
+      restoreSolution: ${{ parameters.Solution }}
+      feedsToUse: 'config'
+      nugetConfigPath: ${{ parameters.NuGetConfigPath }}
+      externalFeedCredentials: ${{ parameters.ExternalFeedCredentials }}
+    condition:  eq(${{ parameters.WithNuGetTool }}, 'true')
+  
+  # dotnet restore still seems necessary, see https://stackoverflow.com/questions/48440223/assets-file-project-assets-json-not-found-run-a-nuget-package-restore
+  - task: DotNetCoreCLI@2
+    displayName: 'DotNet Restore'
+    inputs: 
+      command: 'restore'
+      projects: ${{ parameters.Solution }}
+      feedsToUse: 'config'
+      nugetConfigPath: ${{ parameters.NuGetConfigPath }}
+      externalFeedCredentials: ${{ parameters.ExternalFeedCredentials }}
+    
 - task: DotNetCoreCLI@2
   displayName: 'DotNet Build'
   inputs:
@@ -87,30 +98,30 @@ steps:
     projects: ${{ parameters.Solution }}
     arguments: '--configuration ${{ parameters.BuildConfiguration }} /p:Platform="${{ parameters.BuildPlatform }}" --no-restore'
 
-- task: DotNetCoreCLI@2
-  displayName: 'DotNet Test'
-  inputs:
-    command: 'test'
-    projects: '**/*[Tt]ests/*.csproj'
-    arguments: '--configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build'
-  condition: and(succeeded(), ne(${{ parameters.NoTests }}, 'true'))
+- ${{ if ne(parameters.NoTests, 'true') }}:
+  - task: DotNetCoreCLI@2
+    displayName: 'DotNet Test'
+    inputs:
+      command: 'test'
+      projects: '**/*[Tt]ests/*.csproj'
+      arguments: '--configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build'
 
-- task: DotNetCoreCLI@2
-  displayName: 'DotNet Pack'
-  inputs:
-    command: 'pack'
-    packagesToPack: ${{ parameters.Solution }}
-    versioningScheme: 'off'
-    arguments: '--configuration $(BuildConfiguration) --no-restore --no-build'
-  condition: and(succeeded(), eq(${{ parameters.WithPack }}, 'true'))
+- ${{ if eq(parameters.WithPack, 'true') }}:
+  - task: DotNetCoreCLI@2
+    displayName: 'DotNet Pack'
+    inputs:
+      command: 'pack'
+      packagesToPack: ${{ parameters.Solution }}
+      versioningScheme: 'off'
+      arguments: '--configuration $(BuildConfiguration) --no-restore --no-build'
 
-- task: DotNetCoreCLI@2
-  displayName: 'DotNet Publish'
-  inputs:
-    command: 'publish'
-    projects: ${{ parameters.Solution }}
-    arguments: '--configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build --output $(Build.ArtifactStagingDirectory)\packages'
-    publishWebProjects: false
-    modifyOutputPath: false
-    zipAfterPublish: false
-  condition: and(succeeded(), eq(${{ parameters.WithPublish }}, 'true'))
+- ${{ if eq(parameters.WithPublish, 'true') }}:
+  - task: DotNetCoreCLI@2
+    displayName: 'DotNet Publish'
+    inputs:
+      command: 'publish'
+      projects: ${{ parameters.Solution }}
+      arguments: '--configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build --output $(Build.ArtifactStagingDirectory)\packages'
+      publishWebProjects: false
+      modifyOutputPath: false
+      zipAfterPublish: false
