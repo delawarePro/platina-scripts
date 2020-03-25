@@ -1,0 +1,80 @@
+# Deploys a web application that was provisioned by a Platina compatible CLI.
+parameters:
+- name: azureSubscription
+  type: string
+  displayName: 'Azure Subscription to deploy to.'
+- name: variablePrefix
+  type: string
+  displayName: 'Prefix used in output variables from Platina provision CLI.'
+  default: 'Platina'
+- name: module
+  type: string
+  displayName: 'Platina module name.'
+- name: webApp
+  type: string
+  displayName: 'Web application resource name'
+- name: webAppResourceGroup
+  type: string
+  displayName: 'Web application resource group name'
+- name: webAppSlot
+  type: string
+  displayName: 'Web application deployment slot name'
+  default: production
+- name: package
+  type: string
+  displayName: "Path to zip package to deploy. The deployment will be skipped if this file doesn't exist."
+- name: deploymentType
+  type: string
+  displayName: "Deployment type for the AzureRmWebAppDeployment task."
+  default: zipDeploy
+
+steps:
+- task: PowerShell@2
+  displayName: '${{ parameters.module }} - Check package existence'
+  inputs:
+    targetType: 'inline'
+    script: |
+      if (Test-Path '${{ parameters.package }}' -PathType Leaf) {
+          Write-Host "Deployment package exists."
+          Write-Host "##vso[task.setVariable variable=skipWebApp]false"
+      }
+      else {
+          Write-Host "Deployment package doesn't exist."
+          Write-Host "##vso[task.setVariable variable=skipWebApp]true"
+      }
+
+- task: AzureRmWebAppDeployment@4
+  displayName: '${{ parameters.module }} - Deploy'
+  inputs:
+    ConnectionType: 'AzureRM'
+    azureSubscription: ${{ parameters.azureSubscription }}
+    WebAppKind: 'webApp'
+    WebAppName: ${{ parameters.webApp }}
+    deployToSlotOrASE: true
+    ResourceGroupName: ${{ parameters.webAppResourceGroup }}
+    SlotName: ${{ parameters.webAppSlot }}
+    Package: ${{ parameters.package }}
+    DeploymentType: ${{ parameters.deploymentType }}
+    enableCustomDeployment: true
+    TakeAppOfflineFlag: false
+  condition: and(succeeded(), ne(variables['skipWebApp'], 'true'))
+
+- task: AzureAppServiceManage@0
+  displayName: '${{ parameters.module }} - Swap slots'
+  inputs:
+    azureSubscription: ${{ parameters.azureSubscription }}
+    Action: 'Swap Slots'
+    WebAppName: ${{ parameters.webApp }}
+    ResourceGroupName: ${{ parameters.webAppResourceGroup }}
+    SourceSlot: ${{ parameters.webAppSlot }}
+  condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['${{ parameters.variablePrefix }}${{ parameters.module }}WebAppSlot'], 'production'))
+
+- task: AzureAppServiceManage@0
+  displayName: '${{ parameters.module }} - Remove slot'
+  inputs:
+    azureSubscription: ${{ parameters.azureSubscription }}
+    Action: 'Delete Slot'
+    WebAppName: ${{ parameters.webApp }}
+    ResourceGroupName: ${{ parameters.webAppResourceGroup}}
+    Slot: ${{ parameters.webAppSlot }}
+  condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['${{ parameters.variablePrefix }}${{ parameters.module }}WebAppSlot'], 'production'))

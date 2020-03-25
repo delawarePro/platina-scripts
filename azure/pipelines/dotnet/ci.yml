@@ -1,0 +1,127 @@
+# Builds, tests, packages and publishes a dotnet based solution.
+parameters:
+- name: Solution
+  type: string
+  displayName: 'Solution to process.'
+
+- name: BuildConfiguration
+  type: string
+  default: 'Release'
+  displayName: 'Configuration name to build.'
+- name: buildPlatform
+  type: string
+  default: 'Any CPU'
+  displayName: 'Platform name to build.'
+- name: DotNetSdkVersion
+  type: string
+  default: ''
+  displayName: 'Specifc .NET SDK version to use.'
+
+- name: NoTests
+  type: boolean
+  default: false
+  displayName: 'Whether not to run tests.'
+- name: WithPack
+  type: boolean
+  default: false
+  displayName: 'Whether to run ''dotnet package''.'
+- name: WithBuildArtifacts
+  type: boolean
+  default: false
+  displayName: 'Whether to publish and add result to pipeline artifacts.'
+
+- name: NoNuGetTool
+  type: boolean
+  default: false
+  displayName: 'Whether not to use NuGet tool and only rely on ''dotnet restore''.'
+- name: NuGetToolVersion
+  type: string
+  default: '5.4.0'
+  displayName: 'Specific NuGet tool version to use.'
+- name: NuGetConfigPath
+  type: string
+  default: '.nuget/NuGet.Config'
+  displayName: 'Path to NuGet.config file.'
+- name: ExternalFeedCredentials
+  type: string
+  default: ''
+  displayName: 'Names of external NuGet feed links. '
+
+steps:
+- task: UseDotNet@2
+  displayName: 'Use specific .NET SDK version ${{ parameters.DotNetSdkVersion }}'
+  inputs:
+    packageType: 'sdk'
+    version: ${{ parameters.DotNetSdkVersion }}
+    includePreviewVersions: true
+  condition: and(succeeded(), ne(variables.DotNetSdkVersion, ''))
+
+# dotnet restore does not yet work with external Azure Devops Artifacts: https://github.com/microsoft/azure-pipelines-tasks/issues/7160
+- task: NuGetToolInstaller@1
+  displayName: 'Use specific NuGet tool ${{ parameters.NuGetToolVersion }}'
+  inputs:
+    versionSpec: ${{ parameters.NuGetToolVersion }}
+  condition: and(succeeded(), ne(${{ parameters.NoNuGetTool }}, 'true'))
+
+- task: NuGetCommand@2
+  displayName: 'NuGet restore'
+  inputs:
+    command: 'restore'
+    restoreSolution: ${{ parameters.Solution }}
+    feedsToUse: 'config'
+    nugetConfigPath: ${{ parameters.NuGetConfigPath }}
+    externalFeedCredentials: ${{ parameters.ExternalFeedCredentials }}
+  condition: and(succeeded(), ne(${{ parameters.NoNuGetTool }}, 'true'))
+
+# dotnet restore still seems necessary, see https://stackoverflow.com/questions/48440223/assets-file-project-assets-json-not-found-run-a-nuget-package-restore
+- task: DotNetCoreCLI@2
+  displayName: 'DotNet Restore'
+  inputs: 
+    command: 'restore'
+    projects: ${{ parameters.Solution }}
+    feedsToUse: 'config'
+    nugetConfigPath: ${{ parameters.NuGetConfigPath }}
+    externalFeedCredentials: ${{ parameters.ExternalFeedCredentials }}
+
+- task: DotNetCoreCLI@2
+  displayName: 'DotNet Build'
+  inputs:
+    command: 'build'
+    projects: ${{ parameters.Solution }}
+    arguments: '--configuration ${{ parameters.BuildConfiguration }} /p:Platform="${{ parameters.BuildPlatform }}" --no-restore'
+
+- task: DotNetCoreCLI@2
+  displayName: 'DotNet Test'
+  inputs:
+    command: 'test'
+    projects: '**/*[Tt]ests/*.csproj'
+    arguments: '--configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build'
+  condition: and(succeeded(), ne(${{ parameters.NoTests }}, 'true'))
+
+- task: DotNetCoreCLI@2
+  displayName: 'DotNet Pack'
+  inputs:
+    command: 'pack'
+    packagesToPack: '$(solution)'
+    versioningScheme: 'off'
+    arguments: '--configuration $(BuildConfiguration) --no-restore --no-build'
+  condition: and(succeeded(), eq(${{ parameters.WithPack }}, 'true'))
+
+- task: DotNetCoreCLI@2
+  displayName: 'DotNet Publish'
+  inputs:
+    command: 'publish'
+    projects: ${{ parameters.Solution }}
+    arguments: '--configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build --output $(Build.ArtifactStagingDirectory)\packages'
+    publishWebProjects: false
+    modifyOutputPath: false
+    zipAfterPublish: false
+  condition: and(succeeded(), eq(${{ parameters.WithBuildArtifacts }}, 'true'))
+
+- task: PublishPipelineArtifact@1
+  displayName: 'Attach artifacts to pipeline'
+  inputs:
+    Path: '$(Build.ArtifactStagingDirectory)\packages'
+    ArtifactName: 'packages'
+    ArtifactType: Container
+  condition: and(succeeded(), eq(${{ parameters.WithBuildArtifacts }}, 'true'))
