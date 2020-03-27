@@ -60,13 +60,6 @@ steps:
       version: ${{ parameters.DotNetSdkVersion }}
       includePreviewVersions: true
 
-- ${{ if eq(parameters.WithNuGetTool, false) }}:
-  - task: DotNetCoreCLI@2
-    displayName: 'DotNet Restore'
-    inputs: 
-      command: 'restore'
-      projects: ${{ parameters.Solution }}
-
 - ${{ if eq(parameters.WithNuGetTool, true) }}:
   # dotnet restore does not yet work with external Azure Devops Artifacts: https://github.com/microsoft/azure-pipelines-tasks/issues/7160
   - task: NuGetToolInstaller@1
@@ -81,12 +74,14 @@ steps:
       feedsToUse: 'config'
       nugetConfigPath: ${{ parameters.NuGetConfigPath }}
       externalFeedCredentials: ${{ parameters.ExternalFeedCredentials }}
-  # dotnet restore still seems necessary, see https://stackoverflow.com/questions/48440223/assets-file-project-assets-json-not-found-run-a-nuget-package-restore
-  - task: DotNetCoreCLI@2
-    displayName: 'DotNet Restore'
-    inputs: 
-      command: 'restore'
-      projects: ${{ parameters.Solution }}
+  
+# dotnet restore still seems necessary, see https://stackoverflow.com/questions/48440223/assets-file-project-assets-json-not-found-run-a-nuget-package-restore
+- task: DotNetCoreCLI@2
+  displayName: 'DotNet Restore'
+  inputs: 
+    command: 'restore'
+    projects: ${{ parameters.Solution }}
+    ${{ if parameters.NuGetConfigPath }}:
       feedsToUse: 'config'
       nugetConfigPath: ${{ parameters.NuGetConfigPath }}
       externalFeedCredentials: ${{ parameters.ExternalFeedCredentials }}
