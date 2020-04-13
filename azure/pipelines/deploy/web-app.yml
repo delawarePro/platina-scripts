@@ -63,7 +63,7 @@ steps:
     TakeAppOfflineFlag: false
   condition: and(succeeded(), ne(variables['skipWebApp'], 'true'))
 
-- ${{ if and(ne(parameters.webAppSlot, ''), ne(parameters.webAppSlot, 'production')) }}:
+- ${{ if and(parameters.webAppSlot, ne(parameters.webAppSlot, 'production')) }}:
   - task: AzureAppServiceManage@0
     displayName: '${{ coalesce(parameters.label, parameters.module) }} - Swap slots'
     inputs:
@@ -73,7 +73,7 @@ steps:
       ResourceGroupName: ${{ parameters.webAppResourceGroup }}
       SourceSlot: ${{ parameters.webAppSlot }}
     condition: and(succeeded(), ne(variables['skipWebApp'], 'true'))
-  
+
   - task: AzureAppServiceManage@0
     displayName: '${{ coalesce(parameters.label, parameters.module) }} - Remove slot'
     inputs:
