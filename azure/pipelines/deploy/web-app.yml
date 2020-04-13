@@ -27,10 +27,14 @@ parameters:
   type: string
   displayName: "Deployment type for the AzureRmWebAppDeployment task."
   default: zipDeploy
+- name: label
+  type: string
+  displayName: "Optional label to prefix steps in pipeline."
+  default:
 
 steps:
 - task: PowerShell@2
-  displayName: '${{ parameters.module }} - Check package existence'
+  displayName: '${{ coalesce(parameters.label, parameters.module) }} - Check package existence'
   inputs:
     targetType: 'inline'
     script: |
@@ -44,7 +48,7 @@ steps:
       }
 
 - task: AzureRmWebAppDeployment@4
-  displayName: '${{ parameters.module }} - Deploy'
+  displayName: '${{ coalesce(parameters.label, parameters.module) }} - Deploy'
   inputs:
     ConnectionType: 'AzureRM'
     azureSubscription: ${{ parameters.azureSubscription }}
@@ -59,22 +63,23 @@ steps:
     TakeAppOfflineFlag: false
   condition: and(succeeded(), ne(variables['skipWebApp'], 'true'))
 
-- task: AzureAppServiceManage@0
-  displayName: '${{ parameters.module }} - Swap slots'
-  inputs:
-    azureSubscription: ${{ parameters.azureSubscription }}
-    Action: 'Swap Slots'
-    WebAppName: ${{ parameters.webApp }}
-    ResourceGroupName: ${{ parameters.webAppResourceGroup }}
-    SourceSlot: ${{ parameters.webAppSlot }}
-  condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['${{ parameters.variablePrefix }}${{ parameters.module }}WebAppSlot'], 'production'))
-
-- task: AzureAppServiceManage@0
-  displayName: '${{ parameters.module }} - Remove slot'
-  inputs:
-    azureSubscription: ${{ parameters.azureSubscription }}
-    Action: 'Delete Slot'
-    WebAppName: ${{ parameters.webApp }}
-    ResourceGroupName: ${{ parameters.webAppResourceGroup}}
-    Slot: ${{ parameters.webAppSlot }}
-  condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['${{ parameters.variablePrefix }}${{ parameters.module }}WebAppSlot'], 'production'))
+- ${{ if and(ne(parameters.webAppSlot, ''), ne(parameters.webAppSlot, 'production')) }}:
+  - task: AzureAppServiceManage@0
+    displayName: '${{ coalesce(parameters.label, parameters.module) }} - Swap slots'
+    inputs:
+      azureSubscription: ${{ parameters.azureSubscription }}
+      Action: 'Swap Slots'
+      WebAppName: ${{ parameters.webApp }}
+      ResourceGroupName: ${{ parameters.webAppResourceGroup }}
+      SourceSlot: ${{ parameters.webAppSlot }}
+    condition: and(succeeded(), ne(variables['skipWebApp'], 'true'))
+  
+  - task: AzureAppServiceManage@0
+    displayName: '${{ coalesce(parameters.label, parameters.module) }} - Remove slot'
+    inputs:
+      azureSubscription: ${{ parameters.azureSubscription }}
+      Action: 'Delete Slot'
+      WebAppName: ${{ parameters.webApp }}
+      ResourceGroupName: ${{ parameters.webAppResourceGroup}}
+      Slot: ${{ parameters.webAppSlot }}
+    condition: and(succeeded(), ne(variables['skipWebApp'], 'true'))
