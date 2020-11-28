@@ -68,7 +68,7 @@ steps:
   condition: and(succeeded(), ne(variables['skipWebApp'], 'true'))
 
 - ${{ each step in parameters.postDeploySteps }}:
-    - ${{ step }} 
+  - ${{ step }} 
 
 - ${{ if and(parameters.webAppSlot, ne(parameters.webAppSlot, 'production')) }}:
   - task: AzureAppServiceManage@0
