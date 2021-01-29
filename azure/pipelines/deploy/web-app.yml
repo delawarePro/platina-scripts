@@ -31,6 +31,10 @@ parameters:
   type: string
   displayName: "Optional label to prefix steps in pipeline."
   default:
+- name: postDeploySteps 
+  type: stepList
+  default: []
+  displayName: "Optional steps to execute after the deploy, before swapping slots (e.g. smoke testing)."
 
 steps:
 - task: PowerShell@2
@@ -62,6 +66,9 @@ steps:
     enableCustomDeployment: true
     TakeAppOfflineFlag: false
   condition: and(succeeded(), ne(variables['skipWebApp'], 'true'))
+
+- ${{ each step in parameters.postDeploySteps }}:
+  - ${{ step }} 
 
 - ${{ if and(parameters.webAppSlot, ne(parameters.webAppSlot, 'production')) }}:
   - task: AzureAppServiceManage@0
