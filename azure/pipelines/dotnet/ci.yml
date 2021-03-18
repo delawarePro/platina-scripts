@@ -89,8 +89,9 @@ steps:
 - task: DotNetCoreCLI@2
   displayName: 'DotNet Tool Restore'
   inputs: 
-    command: 'tool restore'
-    
+    command: 'tool'
+    arguments: 'restore'
+
 - task: DotNetCoreCLI@2
   displayName: 'DotNet Build'
   inputs:
