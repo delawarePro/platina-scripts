@@ -85,6 +85,11 @@ steps:
       feedsToUse: 'config'
       nugetConfigPath: ${{ parameters.NuGetConfigPath }}
       externalFeedCredentials: ${{ parameters.ExternalFeedCredentials }}
+
+- task: DotNetCoreCLI@2
+  displayName: 'DotNet Tool Restore'
+  inputs: 
+    command: 'tool restore'
     
 - task: DotNetCoreCLI@2
   displayName: 'DotNet Build'
