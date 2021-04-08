@@ -62,7 +62,7 @@ parameters:
 - name: 'npmExternalFeed'
   type: string
   default: ''
-  displayName: 'If your frontend uses an external feed (i.e. via an npm service connection'), the name of the service connection'
+  displayName: 'If your frontend uses an external feed (i.e. via an npm service connection), the name of the service connection'
 
 steps:
 - ${{ if ne(parameters.DotNetSdkVersion, '') }}:
