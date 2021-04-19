@@ -34,14 +34,6 @@ parameters:
   default: false
   displayName: 'Whether to run ''dotnet publish''.'
 
-- name: WithNuGetTool
-  type: boolean
-  default: false
-  displayName: 'Whether to use NuGet tool and no only rely on ''dotnet restore''.'
-- name: NuGetToolVersion
-  type: string
-  default: '5.4.0'
-  displayName: 'Specific NuGet tool version to use.'
 - name: NuGetConfigPath
   type: string
   default: '.nuget/NuGet.Config'
@@ -60,22 +52,12 @@ steps:
       version: ${{ parameters.DotNetSdkVersion }}
       includePreviewVersions: true
 
-- ${{ if eq(parameters.WithNuGetTool, true) }}:
-  # dotnet restore does not yet work with external Azure Devops Artifacts: https://github.com/microsoft/azure-pipelines-tasks/issues/7160
-  - task: NuGetToolInstaller@1
-    displayName: 'Use specific NuGet tool ${{ parameters.NuGetToolVersion }}'
+- ${{ if ne(parameters.ExternalFeedCredentials, '') }}:
+  - task: NuGetAuthentiate@0
+    displayName: 'NuGet Authenticate'
     inputs:
-      versionSpec: ${{ parameters.NuGetToolVersion }}
-  - task: NuGetCommand@2
-    displayName: 'NuGet restore'
-    inputs:
-      command: 'restore'
-      restoreSolution: ${{ parameters.Solution }}
-      feedsToUse: 'config'
-      nugetConfigPath: ${{ parameters.NuGetConfigPath }}
-      externalFeedCredentials: ${{ parameters.ExternalFeedCredentials }}
-  
-# dotnet restore still seems necessary, see https://stackoverflow.com/questions/48440223/assets-file-project-assets-json-not-found-run-a-nuget-package-restore
+      nuGetServiceConnections: ${{ parameters.ExternalFeedCredentials }}
+
 - task: DotNetCoreCLI@2
   displayName: 'DotNet Restore'
   inputs: 
