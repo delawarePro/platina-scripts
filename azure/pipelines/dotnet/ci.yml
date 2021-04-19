@@ -45,7 +45,7 @@ parameters:
 - name: WithNuGetCache
   type: boolean
   default: true
-  displayName: 'Whether to cache NuGet packages.'
+  displayName: 'Whether to cache NuGet packages. NUGET_PACKAGES environment variable still needs to be set though.'
 
 steps:
 - ${{ if ne(parameters.DotNetSdkVersion, '') }}:
@@ -70,6 +70,7 @@ steps:
       restoreKeys: |
          nuget | "$(Agent.OS)"
       path: $(NUGET_PACKAGES)
+    condition: ne($(NUGET_PACKAGES), '')
   
 - task: DotNetCoreCLI@2
   displayName: 'DotNet Restore'
