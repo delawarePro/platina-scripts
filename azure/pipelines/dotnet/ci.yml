@@ -42,6 +42,13 @@ parameters:
   type: string
   default: ''
   displayName: 'Names of external NuGet feed links. '
+- name: WithNuGetCache
+  type: boolean
+  default: true
+  displayName: 'Whether to cache NuGet packages.'
+
+variables:
+  NuGetPackages: $(Pipeline.Workspace)/.nuget/packages
 
 steps:
 - ${{ if ne(parameters.DotNetSdkVersion, '') }}:
@@ -58,6 +65,15 @@ steps:
     inputs:
       nuGetServiceConnections: ${{ parameters.ExternalFeedCredentials }}
 
+- ${{ if eq(parameters.WithNuGetCache, 'true') }}:
+  - task: Cache@2
+    displayName: Cache NuGet packages
+    inputs:
+      key: 'nuget | "$(Agent.OS)" | **/packages.lock.json,!**/bin/**'
+      restoreKeys: |
+         nuget | "$(Agent.OS)"
+      path: $(NUGET_PACKAGES)
+  
 - task: DotNetCoreCLI@2
   displayName: 'DotNet Restore'
   inputs: 
@@ -67,6 +83,7 @@ steps:
       feedsToUse: 'config'
       nugetConfigPath: ${{ parameters.NuGetConfigPath }}
       externalFeedCredentials: ${{ parameters.ExternalFeedCredentials }}
+      restoreArguments: --locked-mode
 
 - task: DotNetCoreCLI@2
   displayName: 'DotNet Tool Restore'
