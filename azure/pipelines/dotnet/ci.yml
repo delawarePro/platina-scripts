@@ -66,7 +66,7 @@ steps:
   - task: Cache@2
     displayName: Cache NuGet packages
     inputs:
-      key: 'nuget | "$(Agent.OS)" | **/packages.lock.json,!**/bin/**'
+      key: 'nuget | "$(Agent.OS)"'
       restoreKeys: |
          nuget | "$(Agent.OS)"
       path: $(Pipeline.Workspace)/.nuget/packages
