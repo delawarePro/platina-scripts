@@ -70,7 +70,7 @@ steps:
       restoreKeys: |
          nuget | "$(Agent.OS)"
       path: $(NUGET_PACKAGES)
-    condition: ne($(NUGET_PACKAGES), '')
+    condition: ne(variables.NUGET_PACKAGES, '')
   
 - task: DotNetCoreCLI@2
   displayName: 'DotNet Restore'
