@@ -34,14 +34,6 @@ parameters:
   default: false
   displayName: 'Whether to run ''dotnet publish''.'
 
-- name: WithNuGetTool
-  type: boolean
-  default: false
-  displayName: 'Whether to use NuGet tool and no only rely on ''dotnet restore''.'
-- name: NuGetToolVersion
-  type: string
-  default: '5.4.0'
-  displayName: 'Specific NuGet tool version to use.'
 - name: NuGetConfigPath
   type: string
   default: '.nuget/NuGet.Config'
@@ -50,6 +42,10 @@ parameters:
   type: string
   default: ''
   displayName: 'Names of external NuGet feed links. '
+- name: WithNuGetCache
+  type: boolean
+  default: true
+  displayName: 'Whether to cache NuGet packages. NUGET_PACKAGES environment variable still needs to be set though.'
 
 steps:
 - ${{ if ne(parameters.DotNetSdkVersion, '') }}:
@@ -60,22 +56,26 @@ steps:
       version: ${{ parameters.DotNetSdkVersion }}
       includePreviewVersions: true
 
-- ${{ if eq(parameters.WithNuGetTool, true) }}:
-  # dotnet restore does not yet work with external Azure Devops Artifacts: https://github.com/microsoft/azure-pipelines-tasks/issues/7160
-  - task: NuGetToolInstaller@1
-    displayName: 'Use specific NuGet tool ${{ parameters.NuGetToolVersion }}'
+- ${{ if ne(parameters.ExternalFeedCredentials, '') }}:
+  - task: NuGetAuthenticate@0
+    displayName: 'NuGet Authenticate'
     inputs:
-      versionSpec: ${{ parameters.NuGetToolVersion }}
-  - task: NuGetCommand@2
-    displayName: 'NuGet restore'
+      nuGetServiceConnections: ${{ parameters.ExternalFeedCredentials }}
+
+- ${{ if eq(parameters.WithNuGetCache, 'true') }}:
+  # As we don't use package lock files, we want to make sure our cache isn't too far behind the dotnet restore.
+  # We mainly want to optimize waiting for PR builds.
+  - pwsh: echo "##vso[task.setvariable variable=NuGetCacheKey]$(Get-Date -Format yyyyMMdd)"
+    displayName: NuGet Package Cache Key
+  - task: Cache@2
+    displayName: NuGet Package Caching
     inputs:
-      command: 'restore'
-      restoreSolution: ${{ parameters.Solution }}
-      feedsToUse: 'config'
-      nugetConfigPath: ${{ parameters.NuGetConfigPath }}
-      externalFeedCredentials: ${{ parameters.ExternalFeedCredentials }}
+      key: nuget | "$(Agent.OS)" | "$(NuGetCacheKey)"
+      restoreKeys: |
+        nuget | "$(Agent.OS)"
+      path: $(NUGET_PACKAGES)
+    condition: ne(variables.NUGET_PACKAGES, '')
   
-# dotnet restore still seems necessary, see https://stackoverflow.com/questions/48440223/assets-file-project-assets-json-not-found-run-a-nuget-package-restore
 - task: DotNetCoreCLI@2
   displayName: 'DotNet Restore'
   inputs: 
@@ -85,6 +85,7 @@ steps:
       feedsToUse: 'config'
       nugetConfigPath: ${{ parameters.NuGetConfigPath }}
       externalFeedCredentials: ${{ parameters.ExternalFeedCredentials }}
+      restoreArguments: --locked-mode
 
 - task: DotNetCoreCLI@2
   displayName: 'DotNet Tool Restore'
