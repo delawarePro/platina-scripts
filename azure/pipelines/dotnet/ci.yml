@@ -68,7 +68,7 @@ steps:
     inputs:
       # As we don't use package lock files, we want to make sure our cache isn't too far behind the dotnet restore.
       # We mainly want to optimize waiting for PR builds.
-      key: 'nuget | "$(Agent.OS)" | $(Get-Date -Format yyyyMMdd)'
+      key: 'nuget | "$(Agent.OS)" | "$(Get-Date -Format yyyyMMdd)"'
       restoreKeys: |
         nuget | "$(Agent.OS)"
       path: $(NUGET_PACKAGES)
