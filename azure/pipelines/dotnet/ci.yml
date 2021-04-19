@@ -29,10 +29,6 @@ parameters:
   type: boolean
   default: false
   displayName: 'Whether to run ''dotnet package''.'
-- name: WithPush
-  type: boolean
-  default: false
-  displayName: 'Whether to run ''dotnet nuget push'' for default defaultPushSource in NuGet config file.'
 - name: WithPublish
   type: boolean
   default: false
@@ -123,14 +119,6 @@ steps:
       packagesToPack: ${{ parameters.Solution }}
       versioningScheme: 'off'
       arguments: '--configuration $(BuildConfiguration) --no-restore --no-build'
-
-- ${{ if eq(parameters.WithPush, 'true') }}:
-  - task: DotNetCoreCLI@2
-    displayName: 'DotNet Push'
-    inputs:
-      command: 'push'
-      searchPatternPush: '$(Build.ArtifactStagingDirectory)/*.nupkg;$(Build.ArtifactStagingDirectory)/*.snupkg'
-      externalEndPoint: ${{ parameters.ExternalFeedCredentials }}
 
 - ${{ if eq(parameters.WithPublish, 'true') }}:
   - task: DotNetCoreCLI@2
