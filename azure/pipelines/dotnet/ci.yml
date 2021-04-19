@@ -69,7 +69,7 @@ steps:
       key: 'nuget | "$(Agent.OS)"'
       restoreKeys: |
          nuget | "$(Agent.OS)"
-      path: $(Pipeline.Workspace)/.nuget/packages
+      path: $(NUGET_PACKAGES)
   
 - task: DotNetCoreCLI@2
   displayName: 'DotNet Restore'
