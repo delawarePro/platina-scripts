@@ -33,6 +33,10 @@ parameters:
   type: boolean
   default: false
   displayName: 'Whether to run ''dotnet publish''.'
+- name: WithNuGetPush
+  type: boolean
+  default: false
+  displayName: 'Whether to run ''dotnet nuget push'' for default defaultPushSource in NuGet config file.'
 
 - name: NuGetConfigPath
   type: string
@@ -130,3 +134,10 @@ steps:
       publishWebProjects: false
       modifyOutputPath: false
       zipAfterPublish: false
+
+- ${{ if eq(parameters.WithNuGetPush, 'true') }}:
+  - task: DotNetCoreCLI@2
+    displayName: 'DotNet NuGet Push'
+    inputs:
+      command: 'nuget'
+      arguments: 'push $(Build.ArtifactStagingDirectory)/*.*nupkg --skip-duplicate'
