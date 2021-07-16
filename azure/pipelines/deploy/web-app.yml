@@ -31,11 +31,11 @@ parameters:
   type: string
   displayName: "Optional label to prefix steps in pipeline."
   default:
-- name: stagingSlotValidationSteps 
+- name: postStagingSteps
   type: stepList
   default: []
   displayName: "Optional steps to execute after staging slot deploy, before swapping slots (e.g. smoke testing)."
-- name: productionSlotValidationSteps 
+- name: postDeploySteps
   type: stepList
   default: []
   displayName: "Optional steps to execute after production slot deploy, before cleaning up the old slot (when applicable)."
@@ -72,11 +72,11 @@ steps:
   condition: and(succeeded(), ne(variables['skipWebApp'], 'true'))
 
 - ${{ if and(parameters.webAppSlot, eq(parameters.webAppSlot, 'production')) }}:
-  - ${{ each step in parameters.productionSlotValidationSteps }}:
+  - ${{ each step in parameters.postDeploySteps }}:
     - ${{ step }} 
     
 - ${{ if and(parameters.webAppSlot, ne(parameters.webAppSlot, 'production')) }}:
-  - ${{ each step in parameters.stagingSlotValidationSteps }}:
+  - ${{ each step in parameters.postStagingSteps }}:
     - ${{ step }} 
 
   - task: AzureAppServiceManage@0
@@ -89,7 +89,7 @@ steps:
       SourceSlot: ${{ parameters.webAppSlot }}
     condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['${{ parameters.variablePrefix }}${{ parameters.module }}WebAppSlot'], 'production'))
 
-  - ${{ each step in parameters.productionSlotValidationSteps }}:
+  - ${{ each step in parameters.postDeploySteps }}:
     - ${{ step }} 
 
   - task: AzureAppServiceManage@0
