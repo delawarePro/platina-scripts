@@ -91,13 +91,6 @@ steps:
       externalFeedCredentials: ${{ parameters.ExternalFeedCredentials }}
       restoreArguments: --locked-mode
 
-- task: DotNetCoreCLI@2
-  displayName: 'DotNet Tool Restore'
-  inputs: 
-    command: 'custom'
-    custom: 'tool'
-    arguments: 'restore'
-
 - task: PowerShell@2
   displayName: 'Platina Begin Test Initialization'
   inputs:
@@ -106,6 +99,13 @@ steps:
       &'C:\Program Files\dotnet\dotnet.exe' msbuild /target:BeginPlatinaTestInit '${{ parameters.Solution }}'
       exit 0;
   condition: and( eq(${{ parameters.NoTests }}, false), ne(${{ parameters.WithPlatinaTestInit }}, false) )
+  
+  - task: DotNetCoreCLI@2
+  displayName: 'DotNet Tool Restore'
+  inputs: 
+    command: 'custom'
+    custom: 'tool'
+    arguments: 'restore'
 
 - task: DotNetCoreCLI@2
   displayName: 'DotNet Build'
@@ -119,7 +119,7 @@ steps:
   - ${{ each step in parameters.BeforeTestsSteps }}:
     - ${{ step }} 
   - task: PowerShell@2
-    displayName: 'Platina Begin Test Initialization'
+    displayName: 'Platina End Test Initialization'
     inputs:
       targetType: 'inline'
       script: |
