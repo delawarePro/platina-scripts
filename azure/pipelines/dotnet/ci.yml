@@ -98,12 +98,13 @@ steps:
     custom: 'tool'
     arguments: 'restore'
 
-- task: DotNetCoreCLI@2
+- task: PowerShell@2
   displayName: 'Platina Begin Test Initialization'
-  inputs: 
-    command: 'custom'
-    custom: 'msbuild'
-    arguments: '/target:BeginPlatinaTestInit ${{ parameters.Solution }}'
+  inputs:
+    targetType: 'inline'
+    script: |
+      &'C:\Program Files\dotnet\dotnet.exe' msbuild /target:BeginPlatinaTestInit '${{ parameters.Solution }}'
+      exit 0;
   condition: and( eq(${{ parameters.NoTests }}, false), ne(${{ parameters.WithPlatinaTestInit }}, false) )
 
 - task: DotNetCoreCLI@2
@@ -117,12 +118,13 @@ steps:
 - ${{ if ne(parameters.NoTests, 'true') }}:
   - ${{ each step in parameters.BeforeTestsSteps }}:
     - ${{ step }} 
-  - task: DotNetCoreCLI@2
-    displayName: 'Platina End Test Initialization'
-    inputs: 
-      command: 'custom'
-      custom: 'msbuild'
-      arguments: '/target:EndPlatinaTestInit ${{ parameters.Solution }}'
+  - task: PowerShell@2
+    displayName: 'Platina Begin Test Initialization'
+    inputs:
+      targetType: 'inline'
+      script: |
+        &'C:\Program Files\dotnet\dotnet.exe' msbuild /target:BeginPlatinaTestInit '${{ parameters.Solution }}'
+        exit 0;
     condition: and( eq(${{ parameters.NoTests }}, false), ne(${{ parameters.WithPlatinaTestInit }}, false) )
   - task: DotNetCoreCLI@2
     displayName: 'DotNet Test'
