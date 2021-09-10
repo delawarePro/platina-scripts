@@ -98,7 +98,7 @@ steps:
     custom: 'tool'
     arguments: 'restore'
 
-- ${{ if and( ne(parameters.NoTests, 'true'), eq(parameters.WithPlatinaTestInit, 'true') ) }}:
+- ${{ if and( ne(parameters.NoTests, 'true'), ne(parameters.WithPlatinaTestInit, 'false') ) }}:
   - task: DotNetCoreCLI@2
     displayName: 'Platina Begin Test Initialization'
     inputs: 
@@ -117,7 +117,7 @@ steps:
 - ${{ if ne(parameters.NoTests, 'true') }}:
   - ${{ each step in parameters.BeforeTestsSteps }}:
     - ${{ step }} 
-  - ${{ if eq(parameters.WithPlatinaTestInit, 'true') }}:
+  - ${{ if ne(parameters.WithPlatinaTestInit, 'false') }}:
     - task: DotNetCoreCLI@2
       displayName: 'Platina End Test Initialization'
       inputs: 
@@ -130,7 +130,8 @@ steps:
       command: 'test'
       projects: '**/*[Tt]ests/*.csproj'
       arguments: '--configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build'
-
+    condition: succeededOrFailed()
+    
 - ${{ if eq(parameters.WithPack, 'true') }}:
   - task: DotNetCoreCLI@2
     displayName: 'DotNet Pack'
