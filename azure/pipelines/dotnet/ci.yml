@@ -28,7 +28,7 @@ parameters:
 - name: WithPlatinaTestInit
   type: boolean
   default: false
-  displayName: 'Whether to Platina test initialization.'
+  displayName: 'Whether to run Platina test initialization.'
 - name: WithPack
   type: boolean
   default: false
@@ -98,14 +98,14 @@ steps:
     custom: 'tool'
     arguments: 'restore'
 
-#- ${{ if and( ne(parameters.NoTests, 'true'), ne(parameters.WithPlatinaTestInit, 'false') ) }}:
 - task: DotNetCoreCLI@2
   displayName: 'Platina Begin Test Initialization'
   inputs: 
     command: 'custom'
     custom: 'msbuild'
     arguments: '/target:BeginPlatinaTestInit ${{ parameters.Solution }}'
-    
+  condition: and( ne(${{ parameters.NoTests }}, 'true'), ne(${{ parameters.WithPlatinaTestInit }}, 'false') )
+
 - task: DotNetCoreCLI@2
   displayName: 'DotNet Build'
   inputs:
@@ -117,13 +117,13 @@ steps:
 - ${{ if ne(parameters.NoTests, 'true') }}:
   - ${{ each step in parameters.BeforeTestsSteps }}:
     - ${{ step }} 
-  - ${{ if ne(parameters.WithPlatinaTestInit, 'false') }}:
-    - task: DotNetCoreCLI@2
-      displayName: 'Platina End Test Initialization'
-      inputs: 
-        command: 'custom'
-        custom: 'msbuild'
-        arguments: '/target:EndPlatinaTestInit ${{ parameters.Solution }}'
+  - task: DotNetCoreCLI@2
+    displayName: 'Platina End Test Initialization'
+    inputs: 
+      command: 'custom'
+      custom: 'msbuild'
+      arguments: '/target:EndPlatinaTestInit ${{ parameters.Solution }}'
+    condition: and( ne(${{ parameters.NoTests }}, 'true'), ne(${{ parameters.WithPlatinaTestInit }}, 'false') )
   - task: DotNetCoreCLI@2
     displayName: 'DotNet Test'
     inputs:
