@@ -98,7 +98,7 @@ steps:
     custom: 'tool'
     arguments: 'restore'
 
-- ${{ and( eq(parameters.NoTests, false), ne(parameters.WithPlatinaTestInit, false) ) }}:
+- ${{ and( ne(parameters.NoTests, 'true'), ne(parameters.WithPlatinaTestInit, 'false') ) }}:
   - task: DotNetCoreCLI@2
     displayName: 'Platina Begin Test Initialization'
     inputs: 
@@ -117,7 +117,7 @@ steps:
 - ${{ if ne(parameters.NoTests, 'true') }}:
   - ${{ each step in parameters.BeforeTestsSteps }}:
     - ${{ step }} 
-  - ${{ and( eq(parameters.NoTests, false), ne(parameters.WithPlatinaTestInit, false) ) }}:
+  - ${{ and( ne(parameters.NoTests, 'true'), ne(parameters.WithPlatinaTestInit, 'false') ) }}:
     - task: DotNetCoreCLI@2
       displayName: 'Platina End Test Initialization'
       inputs: 
