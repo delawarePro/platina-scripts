@@ -123,7 +123,7 @@ steps:
     inputs:
       targetType: 'inline'
       script: |
-        &'C:\Program Files\dotnet\dotnet.exe' msbuild /target:BeginPlatinaTestInit '${{ parameters.Solution }}'
+        &'C:\Program Files\dotnet\dotnet.exe' msbuild /target:EndPlatinaTestInit '${{ parameters.Solution }}'
         exit 0;
     condition: and( eq(${{ parameters.NoTests }}, false), ne(${{ parameters.WithPlatinaTestInit }}, false) )
   - task: DotNetCoreCLI@2
