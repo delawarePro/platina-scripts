@@ -104,7 +104,7 @@ steps:
     command: 'custom'
     custom: 'msbuild'
     arguments: '/target:BeginPlatinaTestInit ${{ parameters.Solution }}'
-  condition: and( ne(${{ parameters.NoTests }}, 'true'), ne(${{ parameters.WithPlatinaTestInit }}, 'false') )
+  condition: and( eq(${{ parameters.NoTests }}, false), ne(${{ parameters.WithPlatinaTestInit }}, false) )
 
 - task: DotNetCoreCLI@2
   displayName: 'DotNet Build'
