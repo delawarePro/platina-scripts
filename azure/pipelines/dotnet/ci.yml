@@ -160,7 +160,7 @@ steps:
       arguments: '--configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build'
     condition: succeededOrFailed()
 
-- ${{ if and( eq(parameters.WithPush, 'true'), eq(parameters.WithRelease, 'true') ) }}:
+- ${{ if and( eq(parameters.WithPack, 'true'), eq(parameters.WithRelease, 'true') ) }}:
   # Push NuGets.
   - task: NuGetCommand@2
     displayName: 'NuGet Push'
