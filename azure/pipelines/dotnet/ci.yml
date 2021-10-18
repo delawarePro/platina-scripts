@@ -135,7 +135,7 @@ steps:
       publishWebProjects: false
       modifyOutputPath: false
       zipAfterPublish: false
-      
+
 - ${{ if ne(parameters.NoTests, 'true') }}:
   - ${{ each step in parameters.BeforeTestsSteps }}:
     - ${{ step }} 
@@ -155,3 +155,32 @@ steps:
       projects: '**/*[Tt]ests/*.csproj'
       arguments: '--configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build'
     condition: succeededOrFailed()
+
+- ${{ if eq(parameters.WithPush, 'true') }}:
+  # Push NuGets.
+  - task: NuGetCommand@2
+    displayName: 'NuGet Push'
+    inputs:
+      command: 'push'
+      packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg;$(Build.ArtifactStagingDirectory)/*.snupkg;!$(Build.ArtifactStagingDirectory)/*.symbols.nupkg'
+      nuGetFeedType: 'external'
+      publishFeedCredentials: $(externalFeedCredentials)
+
+  # The above task does publish the .snupkgs, but Visual Studio can't seem to consume them from the artifact feed yet?
+  # Therefore, also publish the .pdb to the SymbolServer of this organization.
+  # Users can get rich debugging experience by adding sln-sup as VSTS symbol server in addition to dlw-pltn.
+  - task: PublishSymbols@2
+    displayName: 'Publish symbols to "local" symbol server too'
+    inputs:
+      SearchPattern: '**/bin/**/*.pdb'
+      SymbolServerType: 'TeamServices'
+    condition: and( succeeded(), eq(variables.withPack, true) )
+
+- ${{ if eq(parameters.WithPublish, 'true') }}:
+  # Publish pipeline artifacts.
+  - task: PublishPipelineArtifact@1
+    displayName: 'Publish pipeline artifacts'
+    inputs:
+      path: '$(Build.ArtifactStagingDirectory)\packages'
+      artifactName: 'packages'
+    condition: and( succeeded(), eq(variables.withPublish, true) )
