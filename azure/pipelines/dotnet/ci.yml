@@ -33,14 +33,14 @@ parameters:
   type: boolean
   default: false
   displayName: 'Whether to run ''dotnet package''.'
-- name: WithPush
-  type: boolean
-  default: false
-  displayName: 'Whether to run push NuGet packages to external feed.'
 - name: WithPublish
   type: boolean
   default: false
   displayName: 'Whether to run ''dotnet publish'' and publish to pipeline artifacts.'
+- name: WithRelease
+  type: boolean
+  default: false
+  displayName: 'Whether to push created NuGets to external feed and/or add publish output to pipeline artifacts.'
 
 - name: NuGetConfigPath
   type: string
@@ -160,7 +160,7 @@ steps:
       arguments: '--configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build'
     condition: succeededOrFailed()
 
-- ${{ if eq(parameters.WithPush, 'true') }}:
+- ${{ if and( eq(parameters.WithPush, 'true'), eq(parameters.WithRelease, 'true') ) }}:
   # Push NuGets.
   - task: NuGetCommand@2
     displayName: 'NuGet Push'
@@ -172,19 +172,17 @@ steps:
 
   # The above task does publish the .snupkgs, but Visual Studio can't seem to consume them from the artifact feed yet?
   # Therefore, also publish the .pdb to the SymbolServer of this organization.
-  # Users can get rich debugging experience by adding sln-sup as VSTS symbol server in addition to dlw-pltn.
+  # Users can get rich debugging experience by adding the VSTS symbol server in Visual Studio.
   - task: PublishSymbols@2
     displayName: 'Publish symbols to "local" symbol server too'
     inputs:
       SearchPattern: '**/bin/**/*.pdb'
       SymbolServerType: 'TeamServices'
-    condition: and( succeeded(), eq(variables.withPack, true) )
 
-- ${{ if eq(parameters.WithPublish, 'true') }}:
+- ${{ if and( eq(parameters.WithPublish, 'true'), eq(parameters.WithRelease, 'true') ) }}:
   # Publish pipeline artifacts.
   - task: PublishPipelineArtifact@1
-    displayName: 'Publish pipeline artifacts'
+    displayName: 'Add publish output to pipeline artifacts'
     inputs:
       path: '$(Build.ArtifactStagingDirectory)\packages'
       artifactName: 'packages'
-    condition: and( succeeded(), eq(variables.withPublish, true) )
