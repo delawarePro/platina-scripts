@@ -36,7 +36,11 @@ parameters:
 - name: WithPublish
   type: boolean
   default: false
-  displayName: 'Whether to run ''dotnet publish''.'
+  displayName: 'Whether to run ''dotnet publish'' and publish to pipeline artifacts.'
+- name: WithRelease
+  type: boolean
+  default: false
+  displayName: 'Whether to push created NuGets to external feed and/or add publish output to pipeline artifacts.'
 
 - name: NuGetConfigPath
   type: string
@@ -91,7 +95,7 @@ steps:
       externalFeedCredentials: ${{ parameters.ExternalFeedCredentials }}
       restoreArguments: --locked-mode
 
-- ${{ if and( eq(parameters.NoTests, false), ne(parameters.WithPlatinaTestInit, false) ) }}:
+- ${{ if and( ne(parameters.NoTests, true), ne(parameters.WithPlatinaTestInit, false) ) }}:
   - task: PowerShell@2
     displayName: 'Platina Begin Test Initialization'
     inputs:
@@ -116,6 +120,26 @@ steps:
     arguments: '--configuration ${{ parameters.BuildConfiguration }} /p:Platform="${{ parameters.BuildPlatform }}" --no-restore'
   condition: succeededOrFailed()
 
+- ${{ if eq(parameters.WithPack, 'true') }}:
+  - task: DotNetCoreCLI@2
+    displayName: 'DotNet Pack'
+    inputs:
+      command: 'pack'
+      packagesToPack: ${{ parameters.Solution }}
+      versioningScheme: 'off'
+      arguments: '--configuration $(BuildConfiguration) --no-restore --no-build'
+
+- ${{ if eq(parameters.WithPublish, 'true') }}:
+  - task: DotNetCoreCLI@2
+    displayName: 'DotNet Publish'
+    inputs:
+      command: 'publish'
+      projects: ${{ parameters.Solution }}
+      arguments: '--configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build --output $(Build.ArtifactStagingDirectory)\packages'
+      publishWebProjects: false
+      modifyOutputPath: false
+      zipAfterPublish: false
+
 - ${{ if ne(parameters.NoTests, 'true') }}:
   - ${{ each step in parameters.BeforeTestsSteps }}:
     - ${{ step }} 
@@ -136,22 +160,29 @@ steps:
       arguments: '--configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build'
     condition: succeededOrFailed()
 
-- ${{ if eq(parameters.WithPack, 'true') }}:
-  - task: DotNetCoreCLI@2
-    displayName: 'DotNet Pack'
+- ${{ if and( eq(parameters.WithPack, 'true'), eq(parameters.WithRelease, 'true') ) }}:
+  # Push NuGets.
+  - task: NuGetCommand@2
+    displayName: 'NuGet Push'
     inputs:
-      command: 'pack'
-      packagesToPack: ${{ parameters.Solution }}
-      versioningScheme: 'off'
-      arguments: '--configuration $(BuildConfiguration) --no-restore --no-build'
+      command: 'push'
+      packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg;$(Build.ArtifactStagingDirectory)/*.snupkg;!$(Build.ArtifactStagingDirectory)/*.symbols.nupkg'
+      nuGetFeedType: 'external'
+      publishFeedCredentials: $(externalFeedCredentials)
 
-- ${{ if eq(parameters.WithPublish, 'true') }}:
-  - task: DotNetCoreCLI@2
-    displayName: 'DotNet Publish'
+  # The above task does publish the .snupkgs, but Visual Studio can't seem to consume them from the artifact feed yet?
+  # Therefore, also publish the .pdb to the SymbolServer of this organization.
+  # Users can get rich debugging experience by adding the VSTS symbol server in Visual Studio.
+  - task: PublishSymbols@2
+    displayName: 'Publish symbols to "local" symbol server too'
     inputs:
-      command: 'publish'
-      projects: ${{ parameters.Solution }}
-      arguments: '--configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build --output $(Build.ArtifactStagingDirectory)\packages'
-      publishWebProjects: false
-      modifyOutputPath: false
-      zipAfterPublish: false
+      SearchPattern: '**/bin/**/*.pdb'
+      SymbolServerType: 'TeamServices'
+
+- ${{ if and( eq(parameters.WithPublish, 'true'), eq(parameters.WithRelease, 'true') ) }}:
+  # Publish pipeline artifacts.
+  - task: PublishPipelineArtifact@1
+    displayName: 'Add publish output to pipeline artifacts'
+    inputs:
+      path: '$(Build.ArtifactStagingDirectory)\packages'
+      artifactName: 'packages'
