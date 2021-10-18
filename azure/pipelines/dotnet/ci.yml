@@ -91,7 +91,7 @@ steps:
       externalFeedCredentials: ${{ parameters.ExternalFeedCredentials }}
       restoreArguments: --locked-mode
 
-- ${{ if and( eq(parameters.NoTests, false), ne(parameters.WithPlatinaTestInit, false) ) }}:
+- ${{ if and( ne(parameters.NoTests, true), ne(parameters.WithPlatinaTestInit, false) ) }}:
   - task: PowerShell@2
     displayName: 'Platina Begin Test Initialization'
     inputs:
