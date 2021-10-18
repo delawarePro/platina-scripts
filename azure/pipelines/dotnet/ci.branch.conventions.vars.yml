@@ -1,0 +1,43 @@
+# Configures ci flags based on branches.
+parameters:
+- name: noTests
+  type: boolean
+  default: false
+  displayName: 'Skip tests.'
+- name: withPublish
+  type: boolean
+  default: false
+  displayName: 'Whether to publish packages to pipeline artifacts.'
+- name: prerelease
+  type: string
+  default: none
+  displayName: 'Pre-release to trigger preparing packages.'
+  
+variables:
+  ${{ if and( parameters.Prerelease, ne(parameters.Prerelease, 'none') ) }}:
+    # Detected prerelease build due to parameter.
+    withPack: true
+    withPush: true
+    withPublish: ${{ eq(parameters.withPublish, true) }}
+    prerelease: ${{ parameters.prerelease }}
+    noTests: ${{ parameters.noTests }}
+  ${{ if and( or( not(parameters.Prerelease), eq(parameters.Prerelease, 'none') ), startsWith(variables['Build.SourceBranch'], 'refs/heads/prereleases/') ) }}:
+    # Detected prerelease build for prerelease branch.
+    withPack: true
+    withPush: true
+    withPublish: ${{ eq(parameters.withPublish, true) }}
+    prerelease: ${{ variables['Build.SourceBranchName'] }}
+    # Don't test to improve build times when prereleasing, tests should have succeeded during PR.
+    noTests: true
+  ${{ if and( or( not(parameters.Prerelease), eq(parameters.Prerelease, 'none') ), or( eq(variables['Build.SourceBranch'], 'refs/heads/main'), eq(variables['Build.SourceBranch'], 'refs/heads/master'), startsWith(variables['Build.SourceBranch'], 'refs/heads/releases/') ) ) }}:
+    # Detected release build for main, master or release branch.
+    withPack: true
+    withPush: true
+    withPublish: ${{ eq(parameters.withPublish, true) }}
+    # Don't test to improve build times when releasing, tests should have succeeded during PR.
+    noTests: true
+  ${{ if and( eq(parameters.Prerelease, 'none'), ne(variables['Build.SourceBranch'], 'refs/heads/main'), ne(variables['Build.SourceBranch'], 'refs/heads/master'), not( startsWith(variables['Build.SourceBranch'], 'refs/heads/releases/') ), not( startsWith(variables['Build.SourceBranch'], 'refs/heads/prereleases/') ) ) }}:
+    withPack: false
+    withPush: false
+    withPublish: false
+    noTests: ${{ parameters.noTests }}
