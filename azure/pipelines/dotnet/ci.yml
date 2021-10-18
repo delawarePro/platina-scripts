@@ -116,26 +116,6 @@ steps:
     arguments: '--configuration ${{ parameters.BuildConfiguration }} /p:Platform="${{ parameters.BuildPlatform }}" --no-restore'
   condition: succeededOrFailed()
 
-- ${{ if ne(parameters.NoTests, 'true') }}:
-  - ${{ each step in parameters.BeforeTestsSteps }}:
-    - ${{ step }} 
-  - ${{ if and( eq(parameters.NoTests, false), ne(parameters.WithPlatinaTestInit, false) ) }}:
-    - task: PowerShell@2
-      displayName: 'Platina End Test Initialization'
-      inputs:
-        targetType: 'inline'
-        script: |
-          &'C:\Program Files\dotnet\dotnet.exe' msbuild /target:EndPlatinaTestInit '${{ parameters.Solution }}'
-          # Ignore msbuild errors because targets might not be present in projects.
-          exit 0;
-  - task: DotNetCoreCLI@2
-    displayName: 'DotNet Test'
-    inputs:
-      command: 'test'
-      projects: '**/*[Tt]ests/*.csproj'
-      arguments: '--configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build'
-    condition: succeededOrFailed()
-
 - ${{ if eq(parameters.WithPack, 'true') }}:
   - task: DotNetCoreCLI@2
     displayName: 'DotNet Pack'
@@ -155,3 +135,23 @@ steps:
       publishWebProjects: false
       modifyOutputPath: false
       zipAfterPublish: false
+      
+- ${{ if ne(parameters.NoTests, 'true') }}:
+  - ${{ each step in parameters.BeforeTestsSteps }}:
+    - ${{ step }} 
+  - ${{ if and( eq(parameters.NoTests, false), ne(parameters.WithPlatinaTestInit, false) ) }}:
+    - task: PowerShell@2
+      displayName: 'Platina End Test Initialization'
+      inputs:
+        targetType: 'inline'
+        script: |
+          &'C:\Program Files\dotnet\dotnet.exe' msbuild /target:EndPlatinaTestInit '${{ parameters.Solution }}'
+          # Ignore msbuild errors because targets might not be present in projects.
+          exit 0;
+  - task: DotNetCoreCLI@2
+    displayName: 'DotNet Test'
+    inputs:
+      command: 'test'
+      projects: '**/*[Tt]ests/*.csproj'
+      arguments: '--configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build'
+    condition: succeededOrFailed()
