@@ -42,27 +42,22 @@ parameters:
 
 steps:
 - task: PowerShell@2
-  displayName: '${{ coalesce(parameters.label, parameters.module) }} - Check package existence'
+  displayName: '${{ coalesce(parameters.label, parameters.module) }} - Check preconditions'
   inputs:
     targetType: 'inline'
     script: |
-      if (Test-Path '${{ parameters.package }}' -PathType Leaf) {
-          Write-Host "Deployment package exists."
-          Write-Host "##vso[task.setVariable variable=skipWebApp]false"
-      }
-      else {
+      if (-Not (Test-Path '${{ parameters.package }}' -PathType Leaf)) {
           Write-Host "Deployment package doesn't exist."
           Write-Host "##vso[task.setVariable variable=skipWebApp]true"
       }
-
-- task: PowerShell@2
-  displayName: '${{ coalesce(parameters.label, parameters.module) }} - Check web app variable existence'
-  inputs:
-    targetType: 'inline'
-    script: |
-        Write-Host "Web app variable not set."
+      else if ('$(${{ parameters.variablePrefix }}${{ parameters.module }}WebApp)' -eq '') {
+        Write-Host "Web app variable '${{ parameters.variablePrefix }}${{ parameters.module }}WebApp' not set."
         Write-Host "##vso[task.setVariable variable=skipWebApp]true"
-  condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), eq(variables['${{ parameters.variablePrefix }}${{ parameters.module }}WebApp'], ''))
+      }
+      else {
+          Write-Host "Preconditions have been met to continue web app deployment."
+          Write-Host "##vso[task.setVariable variable=skipWebApp]false"
+      }
 
 - task: AzureRmWebAppDeployment@4
   displayName: '${{ coalesce(parameters.label, parameters.module) }} - Deploy'
