@@ -55,6 +55,15 @@ steps:
           Write-Host "##vso[task.setVariable variable=skipWebApp]true"
       }
 
+- task: PowerShell@2
+  displayName: '${{ coalesce(parameters.label, parameters.module) }} - Check web app variable existence'
+  inputs:
+    targetType: 'inline'
+    script: |
+        Write-Host "Web app variable not set."
+        Write-Host "##vso[task.setVariable variable=skipWebApp]true"
+  condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), eq(variables['${{ parameters.variablePrefix }}${{ parameters.module }}WebApp'], ''))
+
 - task: AzureRmWebAppDeployment@4
   displayName: '${{ coalesce(parameters.label, parameters.module) }} - Deploy'
   inputs:
