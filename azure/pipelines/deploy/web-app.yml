@@ -50,7 +50,7 @@ steps:
           Write-Host "Deployment package doesn't exist."
           Write-Host "##vso[task.setVariable variable=skipWebApp]true"
       }
-      ElseIf (('${{ parameters.webApp }}' -like '$(*)') -Or ('${{ parameters.webApp }}' - eq '')) {
+      ElseIf (('${{ parameters.webApp }}' -like '$(*)') -Or ('${{ parameters.webApp }}' -eq '')) {
           Write-Host "Web app name not set."
           Write-Host "##vso[task.setVariable variable=skipWebApp]true"
       }
