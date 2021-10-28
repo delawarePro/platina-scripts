@@ -57,7 +57,7 @@ steps:
       Else {
           Write-Host "Preconditions have been met to continue web app deployment."
           Write-Host "Deployment package: '${{ parameters.package }}'"
-          Write-Host "Web app name: '$(${{ parameters.webApp }}')"
+          Write-Host "Web app name: '$(${{ parameters.webApp }})'"
           Write-Host "##vso[task.setVariable variable=skipWebApp]false"
       }
 
