@@ -46,15 +46,15 @@ steps:
   inputs:
     targetType: 'inline'
     script: |
-      if (-Not (Test-Path '${{ parameters.package }}' -PathType Leaf)) {
+      If (-Not (Test-Path '${{ parameters.package }}' -PathType Leaf)) {
           Write-Host "Deployment package doesn't exist."
           Write-Host "##vso[task.setVariable variable=skipWebApp]true"
       }
-      else if ('$(${{ parameters.variablePrefix }}${{ parameters.module }}WebApp)' -eq '') {
+      ElseIf ('$(${{ parameters.variablePrefix }}${{ parameters.module }}WebApp)' -eq '') {
         Write-Host "Web app variable '${{ parameters.variablePrefix }}${{ parameters.module }}WebApp' not set."
         Write-Host "##vso[task.setVariable variable=skipWebApp]true"
       }
-      else {
+      Else {
           Write-Host "Preconditions have been met to continue web app deployment."
           Write-Host "##vso[task.setVariable variable=skipWebApp]false"
       }
