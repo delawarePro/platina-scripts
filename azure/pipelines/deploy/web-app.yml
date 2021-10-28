@@ -42,17 +42,23 @@ parameters:
 
 steps:
 - task: PowerShell@2
-  displayName: '${{ coalesce(parameters.label, parameters.module) }} - Check package existence'
+  displayName: '${{ coalesce(parameters.label, parameters.module) }} - Check preconditions'
   inputs:
     targetType: 'inline'
     script: |
-      if (Test-Path '${{ parameters.package }}' -PathType Leaf) {
-          Write-Host "Deployment package exists."
-          Write-Host "##vso[task.setVariable variable=skipWebApp]false"
-      }
-      else {
+      If (-Not (Test-Path '${{ parameters.package }}' -PathType Leaf)) {
           Write-Host "Deployment package doesn't exist."
           Write-Host "##vso[task.setVariable variable=skipWebApp]true"
+      }
+      ElseIf (('${{ parameters.webApp }}' -like '$(*)') -Or ('${{ parameters.webApp }}' -eq '')) {
+          Write-Host "Web app name not set."
+          Write-Host "##vso[task.setVariable variable=skipWebApp]true"
+      }
+      Else {
+          Write-Host "Preconditions have been met to continue web app deployment."
+          Write-Host 'Deployment package: ''${{ parameters.package }}'''
+          Write-Host 'Web app name: ''${{ parameters.webApp }}'''
+          Write-Host "##vso[task.setVariable variable=skipWebApp]false"
       }
 
 - task: AzureRmWebAppDeployment@4
