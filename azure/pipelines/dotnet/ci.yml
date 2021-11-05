@@ -21,6 +21,10 @@ parameters:
   type: stepList
   default: []
   displayName: 'Optional steps to execute before test execution.'
+- name: AfterTestsSteps
+  type: stepList
+  default: []
+  displayName: 'Optional steps to execute after test execution.'
 - name: NoTests
   type: boolean
   default: false
@@ -159,6 +163,8 @@ steps:
       projects: '**/*[Tt]ests/*.csproj'
       arguments: '--configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build'
     condition: succeededOrFailed()
+  - ${{ each step in parameters.AfterTestsSteps }}:
+    - ${{ step }} 
 
 - ${{ if and( eq(parameters.WithPack, 'true'), eq(parameters.WithRelease, 'true') ) }}:
   # Push NuGets.
