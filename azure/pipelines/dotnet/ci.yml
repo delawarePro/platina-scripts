@@ -46,6 +46,10 @@ parameters:
   default: false
   displayName: 'Whether to push created NuGets to external feed and/or add publish output to pipeline artifacts.'
 
+- name: NuGetToolVersion
+  type: string
+  default: ''
+  displayName: 'Specifc NuGet tool version to use.'
 - name: NuGetConfigPath
   type: string
   default: '.nuget/NuGet.Config'
@@ -60,6 +64,14 @@ parameters:
   displayName: 'Whether to cache NuGet packages. NUGET_PACKAGES environment variable still needs to be set though.'
 
 steps:
+- ${{ if ne(parameters.NuGetToolVersion, '') }}:
+  # Hosted build agent windows-2022 doesn't seem to auto select right nuget version, so we allow to set it explicitly.
+  # See https://github.com/actions/virtual-environments/issues/4754
+  - task: NuGetToolInstaller@1
+    displayName: 'Use specific NuGet tool version ${{ parameters.NuGetToolVersion }}'
+    inputs:
+      versionSpec: ${{ parameters.NuGetToolVersion }}
+
 - ${{ if ne(parameters.DotNetSdkVersion, '') }}:
   - task: UseDotNet@2
     displayName: 'Use specific .NET SDK version ${{ parameters.DotNetSdkVersion }}'
