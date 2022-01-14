@@ -4,6 +4,10 @@ parameters:
   type: boolean
   default: false
   displayName: 'Skip tests.'
+- name: withPack
+  type: boolean
+  default: true
+  displayName: 'Whether to create packages to publish to feeds.'
 - name: withPublish
   type: boolean
   default: false
@@ -16,14 +20,14 @@ parameters:
 variables:
   ${{ if and( parameters.Prerelease, ne(parameters.Prerelease, 'none') ) }}:
     # Detected prerelease build due to parameter.
-    withPack: true
+    withPack: ${{ eq(parameters.withPack, true) }}
     withPublish: ${{ eq(parameters.withPublish, true) }}
     withRelease: true
     prerelease: ${{ parameters.prerelease }}
     noTests: ${{ parameters.noTests }}
   ${{ if and( or( not(parameters.Prerelease), eq(parameters.Prerelease, 'none') ), startsWith(variables['Build.SourceBranch'], 'refs/heads/prereleases/') ) }}:
     # Detected prerelease build for prerelease branch.
-    withPack: true
+    withPack: ${{ eq(parameters.withPack, true) }}
     withPublish: ${{ eq(parameters.withPublish, true) }}
     withRelease: true
     prerelease: ${{ variables['Build.SourceBranchName'] }}
@@ -31,7 +35,7 @@ variables:
     noTests: true
   ${{ if and( or( not(parameters.Prerelease), eq(parameters.Prerelease, 'none') ), or( eq(variables['Build.SourceBranch'], 'refs/heads/main'), eq(variables['Build.SourceBranch'], 'refs/heads/master'), startsWith(variables['Build.SourceBranch'], 'refs/heads/releases/') ) ) }}:
     # Detected release build for main, master or release branch.
-    withPack: true
+    withPack: ${{ eq(parameters.withPack, true) }}
     withPublish: ${{ eq(parameters.withPublish, true) }}
     withRelease: true
     # Don't test to improve build times when releasing, tests should have succeeded during PR.
@@ -39,5 +43,5 @@ variables:
   ${{ if and( eq(parameters.Prerelease, 'none'), ne(variables['Build.SourceBranch'], 'refs/heads/main'), ne(variables['Build.SourceBranch'], 'refs/heads/master'), not( startsWith(variables['Build.SourceBranch'], 'refs/heads/releases/') ), not( startsWith(variables['Build.SourceBranch'], 'refs/heads/prereleases/') ) ) }}:
     withPack: false
     withPublish: false
-    withRelease: true
+    withRelease: false
     noTests: ${{ parameters.noTests }}
