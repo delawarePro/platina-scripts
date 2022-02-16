@@ -15,8 +15,12 @@ parameters:
 - name: DotNetSdkVersion
   type: string
   default: ''
-  displayName: 'Specifc .NET SDK version to use.'
+  displayName: 'Specific .NET SDK version to use.'
 
+- name: azureSubscription
+  type: string
+  default: ''
+  displayName: 'Optional Azure Subscription to run ''dotnet test''.'
 - name: BeforeTestsSteps
   type: stepList
   default: []
@@ -168,13 +172,24 @@ steps:
           &'C:\Program Files\dotnet\dotnet.exe' msbuild /target:EndPlatinaTestInit '${{ parameters.Solution }}'
           # Ignore msbuild errors because targets might not be present in projects.
           exit 0;
-  - task: DotNetCoreCLI@2
-    displayName: 'DotNet Test'
-    inputs:
-      command: 'test'
-      projects: '**/*[Tt]ests/*.csproj'
-      arguments: '--configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build'
-    condition: succeededOrFailed()
+
+  - ${{ if ne(parameters.azureSubscription, '') }}:
+    - task: AzureCLI@2
+      displayName: 'DotNet Test (AzureCLI)'
+      inputs:
+        azureSubscription: ${{ parameters.azureSubscription }}
+        scriptType: 'pscore'
+        scriptLocation: 'inlineScript'
+        inlineScript: 'dotnet test **/*[Tt]ests/*.csproj --configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build'
+  - ${{ else }}:
+    - task: DotNetCoreCLI@2
+      displayName: 'DotNet Test'
+      inputs:
+        command: 'test'
+        projects: '**/*[Tt]ests/*.csproj'
+        arguments: '--configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build'
+      condition: succeededOrFailed()
+
   - ${{ each step in parameters.AfterTestsSteps }}:
     - ${{ step }} 
 
