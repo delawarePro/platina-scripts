@@ -180,7 +180,7 @@ steps:
         azureSubscription: ${{ parameters.azureSubscription }}
         scriptType: 'pscore'
         scriptLocation: 'inlineScript'
-        inlineScript: 'dotnet test **/*[Tt]ests/*.csproj --configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build'
+        inlineScript: 'dotnet test ${{ parameters.Solution }} --configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build'
   - ${{ else }}:
     - task: DotNetCoreCLI@2
       displayName: 'DotNet Test'
