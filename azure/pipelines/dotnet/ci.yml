@@ -181,6 +181,13 @@ steps:
         scriptType: 'pscore'
         scriptLocation: 'inlineScript'
         inlineScript: 'dotnet test ${{ parameters.Solution }} --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build'
+    
+    - task: PublishTestResults@2
+      displayName: 'Publish Test Results'
+      inputs:
+        testResultsFormat: 'VSTest'
+        testResultsFiles: '*.trx'
+        searchFolder: '$(Agent.TempDirectory)'
   - ${{ else }}:
     - task: DotNetCoreCLI@2
       displayName: 'DotNet Test'
