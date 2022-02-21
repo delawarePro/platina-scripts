@@ -15,7 +15,7 @@ parameters:
 - name: DotNetSdkVersion
   type: string
   default: ''
-  displayName: 'Specifc .NET SDK version to use.'
+  displayName: 'Specific .NET SDK version to use.'
 
 - name: BeforeTestsSteps
   type: stepList
@@ -62,6 +62,11 @@ parameters:
   type: boolean
   default: true
   displayName: 'Whether to cache NuGet packages. NUGET_PACKAGES environment variable still needs to be set though.'
+
+- name: azureSubscription
+  type: string
+  default: ''
+  displayName: 'Optional Azure Subscription to run ''dotnet test'' under Azure CLI context. So you can access Azure resources (like App Configuration, Key Vault, etc) with authenticated credentials.'
 
 steps:
 - ${{ if ne(parameters.NuGetToolVersion, '') }}:
@@ -168,13 +173,34 @@ steps:
           &'C:\Program Files\dotnet\dotnet.exe' msbuild /target:EndPlatinaTestInit '${{ parameters.Solution }}'
           # Ignore msbuild errors because targets might not be present in projects.
           exit 0;
-  - task: DotNetCoreCLI@2
-    displayName: 'DotNet Test'
-    inputs:
-      command: 'test'
-      projects: '**/*[Tt]ests/*.csproj'
-      arguments: '--configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build'
-    condition: succeededOrFailed()
+
+  - ${{ if eq(parameters.azureSubscription, '') }}:
+    - task: DotNetCoreCLI@2
+      displayName: 'DotNet Test'
+      inputs:
+        command: 'test'
+        projects: '**/*[Tt]ests/*.csproj'
+        arguments: '--configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build'
+      condition: succeededOrFailed()
+
+  - ${{ else }}:
+    - task: AzureCLI@2
+      displayName: 'DotNet Test (AzureCLI)'
+      inputs:
+        azureSubscription: ${{ parameters.azureSubscription }}
+        scriptType: 'pscore'
+        scriptLocation: 'inlineScript'
+        inlineScript: 'dotnet test ${{ parameters.Solution }} --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build'
+      condition: succeededOrFailed()
+
+    - task: PublishTestResults@2
+      displayName: 'Publish Test Results'
+      inputs:
+        testResultsFormat: 'VSTest'
+        testResultsFiles: '*.trx'
+        searchFolder: '$(Agent.TempDirectory)'
+      condition: succeededOrFailed()
+
   - ${{ each step in parameters.AfterTestsSteps }}:
     - ${{ step }} 
 
