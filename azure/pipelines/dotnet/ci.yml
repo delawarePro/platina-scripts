@@ -66,7 +66,7 @@ parameters:
 - name: azureSubscription
   type: string
   default: ''
-  displayName: 'Optional Azure Subscription to run ''dotnet test''.'
+  displayName: 'Optional Azure Subscription to run ''dotnet test'' under Azure CLI context. So you can access Azure resources (like App Configuration, Key Vault, etc) with authenticated credentials.''
 
 steps:
 - ${{ if ne(parameters.NuGetToolVersion, '') }}:
@@ -199,6 +199,7 @@ steps:
         testResultsFormat: 'VSTest'
         testResultsFiles: '*.trx'
         searchFolder: '$(Agent.TempDirectory)'
+      condition: succeededOrFailed()
 
   - ${{ each step in parameters.AfterTestsSteps }}:
     - ${{ step }} 
