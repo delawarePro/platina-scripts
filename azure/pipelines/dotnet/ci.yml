@@ -147,7 +147,7 @@ steps:
     inputs:
       command: 'custom'
       custom: 'pack'
-      packagesToPack: ${{ parameters.Solution }}
+      projects: ${{ parameters.Solution }}
       arguments: '--configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build'
 
 - ${{ if eq(parameters.WithPublish, 'true') }}:
