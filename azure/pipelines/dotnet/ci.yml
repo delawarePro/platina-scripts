@@ -148,7 +148,7 @@ steps:
       command: 'custom'
       custom: 'pack'
       projects: ${{ parameters.Solution }}
-      arguments: '--configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build'
+      arguments: '--configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build --output $(Build.ArtifactStagingDirectory)'
 
 - ${{ if eq(parameters.WithPublish, 'true') }}:
   - task: DotNetCoreCLI@2
