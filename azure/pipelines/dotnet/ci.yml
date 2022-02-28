@@ -145,10 +145,10 @@ steps:
   - task: DotNetCoreCLI@2
     displayName: 'DotNet Pack'
     inputs:
-      command: 'pack'
-      packagesToPack: ${{ parameters.Solution }}
-      versioningScheme: 'off'
-      arguments: '--configuration $(BuildConfiguration) --no-restore --no-build'
+      command: 'custom'
+      custom: 'pack'
+      projects: ${{ parameters.Solution }}
+      arguments: '--configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build --output $(Build.ArtifactStagingDirectory)'
 
 - ${{ if eq(parameters.WithPublish, 'true') }}:
   - task: DotNetCoreCLI@2
