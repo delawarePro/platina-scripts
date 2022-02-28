@@ -54,6 +54,10 @@ parameters:
   type: string
   default: '.nuget/NuGet.Config'
   displayName: 'Path to NuGet.config file.'
+- name: InternalFeedName
+  type: string
+  default: ''
+  displayName: 'Name of internal NuGet feed to publish to.'
 - name: ExternalFeedCredentials
   type: string
   default: ''
@@ -62,10 +66,6 @@ parameters:
   type: boolean
   default: true
   displayName: 'Whether to cache NuGet packages. NUGET_PACKAGES environment variable still needs to be set though.'
-- name: InternalPublishFeedName
-  type: string
-  default: ''
-  displayName: 'Name of internal NuGet feed to publish to.'
 
 - name: azureSubscription
   type: string
@@ -209,7 +209,7 @@ steps:
     - ${{ step }} 
 
 - ${{ if and( eq(parameters.WithPack, 'true'), eq(parameters.WithRelease, 'true') ) }}:
-  - ${{ if eq(parameters.InternalPublishFeedName, '') }}:
+  - ${{ if eq(parameters.InternalFeedName, '') }}:
     # Push NuGets to external feed.
     - task: NuGetCommand@2
       displayName: 'NuGet Push'
@@ -219,7 +219,7 @@ steps:
         nuGetFeedType: 'external'
         publishFeedCredentials: $(externalFeedCredentials)
 
-  - ${{ if ne(parameters.InternalPublishFeedName, '') }}:
+  - ${{ if ne(parameters.InternalFeedName, '') }}:
     # Push NuGets to internal feed.
     - task: NuGetCommand@2
       displayName: 'NuGet Push'
@@ -227,7 +227,7 @@ steps:
         command: 'push'
         packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg;$(Build.ArtifactStagingDirectory)/*.snupkg;!$(Build.ArtifactStagingDirectory)/*.symbols.nupkg'
         nuGetFeedType: 'internal'
-        publishVstsFeed: ${{ parameters.InternalPublishFeedName }}
+        publishVstsFeed: ${{ parameters.InternalFeedName }}
 
   # The above task does publish the .snupkgs, but Visual Studio can't seem to consume them from the artifact feed yet?
   # Therefore, also publish the .pdb to the SymbolServer of this organization.
