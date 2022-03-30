@@ -72,6 +72,11 @@ parameters:
   default: ''
   displayName: 'Optional Azure Subscription to run ''dotnet test'' under Azure CLI context. So you can access Azure resources (like App Configuration, Key Vault, etc) with authenticated credentials.'
 
+- name: TestArguments
+  type: string
+  default: ''
+  displayName: 'Optional arguments to pass to test runner.'
+
 steps:
 - ${{ if ne(parameters.NuGetToolVersion, '') }}:
   # Hosted build agent windows-2022 doesn't seem to auto select right nuget version, so we allow to set it explicitly.
@@ -184,7 +189,7 @@ steps:
       inputs:
         command: 'test'
         projects: '**/*[Tt]ests/*.csproj'
-        arguments: '--configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build'
+        arguments: '--configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build ${{ parameters.TestArguments }}'
       condition: succeededOrFailed()
 
   - ${{ else }}:
