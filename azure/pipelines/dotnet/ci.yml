@@ -17,6 +17,10 @@ parameters:
   default: ''
   displayName: 'Specific .NET SDK version to use.'
 
+- name: TestArguments
+  type: string
+  default: ''
+  displayName: 'Optional arguments to pass to test runner.'
 - name: BeforeTestsSteps
   type: stepList
   default: []
@@ -71,11 +75,6 @@ parameters:
   type: string
   default: ''
   displayName: 'Optional Azure Subscription to run ''dotnet test'' under Azure CLI context. So you can access Azure resources (like App Configuration, Key Vault, etc) with authenticated credentials.'
-
-- name: TestArguments
-  type: string
-  default: ''
-  displayName: 'Optional arguments to pass to test runner.'
 
 steps:
 - ${{ if ne(parameters.NuGetToolVersion, '') }}:
