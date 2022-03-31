@@ -17,6 +17,10 @@ parameters:
   default: ''
   displayName: 'Specific .NET SDK version to use.'
 
+- name: TestProjectGlob
+  type: string
+  default: '**/*[Tt]ests/*.csproj'
+  displayName: 'Glob to match test projects.'
 - name: TestArguments
   type: string
   default: ''
@@ -187,7 +191,7 @@ steps:
       displayName: 'DotNet Test'
       inputs:
         command: 'test'
-        projects: '**/*[Tt]ests/*.csproj'
+        projects: ${{ parameters.TestProjectGlob }}
         arguments: '--configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build ${{ parameters.TestArguments }}'
       condition: succeededOrFailed()
 
