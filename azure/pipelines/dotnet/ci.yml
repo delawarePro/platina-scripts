@@ -202,7 +202,7 @@ steps:
         azureSubscription: ${{ parameters.azureSubscription }}
         scriptType: 'pscore'
         scriptLocation: 'inlineScript'
-        inlineScript: 'dotnet test ${{ parameters.Solution }} --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build'
+        inlineScript: 'dotnet test ${{ parameters.Solution }} --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build ${{ parameters.TestArguments }}'
       condition: succeededOrFailed()
 
     - task: PublishTestResults@2
