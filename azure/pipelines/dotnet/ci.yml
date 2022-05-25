@@ -41,6 +41,7 @@ parameters:
   type: boolean
   default: false
   displayName: 'Whether to run Platina test initialization.'
+  
 - name: WithPack
   type: boolean
   default: false
@@ -79,6 +80,11 @@ parameters:
   type: string
   default: ''
   displayName: 'Optional Azure Subscription to run ''dotnet test'' under Azure CLI context. So you can access Azure resources (like App Configuration, Key Vault, etc) with authenticated credentials.'
+
+- name: PostBuildDotnetArgs
+  type: string
+  default: '--no-restore --no-build'
+  displayName: 'Arguments passed to dotnet commander  post build dotnet tasks like test, pack and publish.'
 
 steps:
 - ${{ if ne(parameters.NuGetToolVersion, '') }}:
@@ -160,7 +166,7 @@ steps:
       command: 'custom'
       custom: 'pack'
       projects: ${{ parameters.Solution }}
-      arguments: '--configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build --output $(Build.ArtifactStagingDirectory)'
+      arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} --output $(Build.ArtifactStagingDirectory)'
 
 - ${{ if eq(parameters.WithPublish, 'true') }}:
   - task: DotNetCoreCLI@2
@@ -168,7 +174,7 @@ steps:
     inputs:
       command: 'publish'
       projects: ${{ parameters.Solution }}
-      arguments: '--configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build --output $(Build.ArtifactStagingDirectory)\packages'
+      arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} --output $(Build.ArtifactStagingDirectory)\packages'
       publishWebProjects: false
       modifyOutputPath: false
       zipAfterPublish: false
@@ -192,7 +198,7 @@ steps:
       inputs:
         command: 'test'
         projects: ${{ parameters.TestProjectsGlob }}
-        arguments: '--configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build ${{ parameters.TestArguments }}'
+        arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestArguments }}'
       condition: succeededOrFailed()
 
   - ${{ else }}:
@@ -202,7 +208,7 @@ steps:
         azureSubscription: ${{ parameters.azureSubscription }}
         scriptType: 'pscore'
         scriptLocation: 'inlineScript'
-        inlineScript: 'dotnet test ${{ parameters.Solution }} --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} --no-restore --no-build ${{ parameters.TestArguments }}'
+        inlineScript: 'dotnet test ${{ parameters.Solution }} --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestArguments }}'
       condition: succeededOrFailed()
 
     - task: PublishTestResults@2
