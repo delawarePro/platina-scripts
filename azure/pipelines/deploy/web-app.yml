@@ -22,7 +22,7 @@ parameters:
   default: production
 - name: package
   type: string
-  displayName: 'Path to zip package to deploy. The deployment will be skipped if this file doesn't exist.'
+  displayName: Path to zip package to deploy. The deployment will be skipped if this file doesn't exist.
 - name: deploymentType
   type: string
   displayName: 'Deployment type for the AzureRmWebAppDeployment task.'
