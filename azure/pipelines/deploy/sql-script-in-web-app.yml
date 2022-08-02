@@ -1,0 +1,82 @@
+# Executes SQL script embedded in web-app package file.
+# All scripts located in 'resources' directory of the zip file will be extracted.
+# resources/deploy.sql will be executed
+parameters:
+- name: azureSubscription
+  type: string
+  displayName: 'Azure Subscription to deploy to.'
+- name: variablePrefix
+  type: string
+  displayName: 'Prefix used in output variables from Platina provision CLI.'
+  default: 'Platina'
+- name: module
+  type: string
+  displayName: 'Platina module name.'
+- name: package
+  type: string
+  displayName: 'Path to zip package of the web app. The deployment will be skipped if this file doesn't exist.'
+- name: serverResourceGroup
+  type: string
+  displayName: 'SQL server resource group name.'
+- name: server
+  type: string
+  displayName: 'Fully qualified domain name of the SQL server.'
+- name: adminLogin
+  type: string
+  displayName: 'SQL admin username.'
+- name: adminPassword
+  type: string
+  displayName: 'SQL admin password.'
+- name: database
+  type: string
+  displayName: 'SQL database name.'
+- name: label
+  type: string
+  displayName: 'Optional label to prefix steps in pipeline.'
+  default:
+- name: preDeploySteps
+  type: stepList
+  default: []
+  displayName: 'Optional steps to execute before executing SQL script.'
+- name: postDeploySteps
+  type: stepList
+  default: []
+  displayName: 'Optional steps to execute after SQL script execution.'
+
+steps:
+- task: PowerShell@2
+  displayName: '${{ coalesce(parameters.label, parameters.module) }} - Check preconditions'
+  inputs:
+    targetType: 'inline'
+    script: |
+      If (-Not (Test-Path '${{ parameters.package }}' -PathType Leaf)) {
+          Write-Host "Deployment package doesn't exist."
+          Write-Host "##vso[task.setVariable variable=skipSqlScript]true"
+      }
+      Else {
+          Write-Host "Preconditions have been met to continue sql script in web app deployment."
+          Write-Host 'Package: ''${{ parameters.package }}'''
+          Write-Host "##vso[task.setVariable variable=skipSqlScript]false"
+      }
+
+- task: ExtractFiles@1
+  displayName: '${{ coalesce(parameters.label, parameters.module) }} - Extracting package'
+  inputs:
+    archiveFilePatterns: ${{ parameters.package }} 
+    destinationFolder: $(Pipeline.Workspace)/${{ parameters.module }}/package
+    cleanDestinationFolder: true 
+
+- template: azure/pipelines/deploy/sql-script
+  parameters:
+    azureSubscription: ${{ parameters.azureSubscription }}
+    variablePrefix: ${{ parameters.variablePrefix }}
+    module: ${{ parameters.module }}
+    script: $(Pipeline.Workspace)/${{ parameters.module }}/package/resources/deploy.sql
+    serverResourceGroup: ${{ parameters.serverResourceGroup }}
+    server: ${{ parameters.server }}
+    adminLogin: ${{ parameters.adminLogin }}
+    adminPassword: ${{ parameters.adminPassword }}
+    database: ${{ parameters.database }}
+    label: ${{ parameters.label }}
+    preDeploySteps: ${{ parameters.preDeploySteps }}
+    postDeploySteps: ${{ parameters.postDeploySteps }}
