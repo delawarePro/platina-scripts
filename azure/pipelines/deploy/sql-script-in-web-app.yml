@@ -14,7 +14,7 @@ parameters:
   displayName: 'Platina module name.'
 - name: package
   type: string
-  displayName: "Path to zip package of the web app. The deployment will be skipped if this file doesn't exist."
+  displayName: 'Path to zip package of the web app. The deployment will be skipped if this file doesn''t exist.'
 - name: serverResourceGroup
   type: string
   displayName: 'SQL server resource group name.'
@@ -71,7 +71,7 @@ steps:
     azureSubscription: ${{ parameters.azureSubscription }}
     variablePrefix: ${{ parameters.variablePrefix }}
     module: ${{ parameters.module }}
-    script: $(Pipeline.Workspace)/${{ parameters.module }}/package/resources/deploy.sql
+    script: deploy.sql
     workingDirectory: $(Pipeline.Workspace)/${{ parameters.module }}/package/resources
     serverResourceGroup: ${{ parameters.serverResourceGroup }}
     server: ${{ parameters.server }}

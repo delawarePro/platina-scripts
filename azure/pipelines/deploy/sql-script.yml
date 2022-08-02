@@ -14,7 +14,7 @@ parameters:
   displayName: 'Platina module name.'
 - name: script
   type: string
-  displayName: "Path to SQL script to execute. The deployment will be skipped if this file doesn't exist."
+  displayName: 'Path to SQL script to execute. The deployment will be skipped if this file doesn''t exist.'
 - name: workingDirectory
   type: string
   displayName: 'Optional working directory for the script.'
@@ -75,10 +75,11 @@ steps:
       }
       Else {
           Write-Host "Preconditions have been met to continue sql script deployment."
-          Write-Host 'Script:      ''${{ parameters.script }}'''
-          Write-Host 'Server:      ''${{ parameters.server }}'''
-          Write-Host 'Admin login: ''${{ parameters.adminLogin }}'''
-          Write-Host 'Database:    ''${{ parameters.database }}'''
+          Write-Host 'Script:             ''${{ parameters.script }}'''
+          Write-Host 'Working directory:  ''${{ parameters.workingDirectory }}'''
+          Write-Host 'Server:             ''${{ parameters.server }}'''
+          Write-Host 'Admin login:        ''${{ parameters.adminLogin }}'''
+          Write-Host 'Database:           ''${{ parameters.database }}'''
           Write-Host "##vso[task.setVariable variable=skipSqlScript]false"
       }
 
@@ -91,7 +92,7 @@ steps:
   inputs:
     filename: Sqlcmd
     arguments: '-S ${{ parameters.server }} -U ${{ parameters.adminLogin }} -P ${{ parameters.adminPassword }} -d ${{ parameters.database }} -i ${{ parameters.script }} -I'
-    workingDirectory: ''
+    workingDirectory: ${{ parameters.workingDirectory }}
     failOnStdErr: true
   condition: and(succeeded(), ne(variables['skipSqlScript'], 'true'))
 
