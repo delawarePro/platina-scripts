@@ -53,7 +53,7 @@ steps:
   inputs:
     targetType: 'inline'
     script: |
-      If (-Not (Test-Path '${{ parameters.script }}' -PathType Leaf)) {
+      If (-Not (Test-Path '${{ parameters.workingDirectory }}${{ parameters.script }}' -PathType Leaf)) {
           Write-Host "SQL script doesn't exist."
           Write-Host "##vso[task.setVariable variable=skipSqlScript]true"
       }
