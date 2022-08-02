@@ -66,7 +66,7 @@ steps:
     destinationFolder: $(Pipeline.Workspace)/${{ parameters.module }}/package
     cleanDestinationFolder: true 
 
-- template: azure/pipelines/deploy/sql-script
+- template: sql-script
   parameters:
     azureSubscription: ${{ parameters.azureSubscription }}
     variablePrefix: ${{ parameters.variablePrefix }}
