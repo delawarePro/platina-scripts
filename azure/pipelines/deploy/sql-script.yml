@@ -91,7 +91,7 @@ steps:
   displayName: '${{ coalesce(parameters.label, parameters.module) }} - Execute SQL script'
   inputs:
     filename: Sqlcmd
-    arguments: '-S ${{ parameters.server }} -U ${{ parameters.adminLogin }} -P ${{ parameters.adminPassword }} -d ${{ parameters.database }} -i ${{ parameters.script }} -I'
+    arguments: '-S ${{ parameters.server }} -U ${{ parameters.adminLogin }} -P ${{ parameters.adminPassword }} -d ${{ parameters.database }} -i ${{ parameters.workingDirectory }}${{ parameters.script }} -I -v path=${{ parameters.workingDirectory }}'
     workingDirectory: ${{ parameters.workingDirectory }}
     failOnStdErr: true
   condition: and(succeeded(), ne(variables['skipSqlScript'], 'true'))
