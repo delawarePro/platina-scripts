@@ -14,7 +14,7 @@ parameters:
   displayName: 'Platina module name.'
 - name: package
   type: string
-  displayName: 'Path to zip package of the web app. The deployment will be skipped if this file doesn't exist.'
+  displayName: "Path to zip package of the web app. The deployment will be skipped if this file doesn't exist."
 - name: serverResourceGroup
   type: string
   displayName: 'SQL server resource group name.'
