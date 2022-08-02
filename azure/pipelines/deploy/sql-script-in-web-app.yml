@@ -72,6 +72,7 @@ steps:
     variablePrefix: ${{ parameters.variablePrefix }}
     module: ${{ parameters.module }}
     script: $(Pipeline.Workspace)/${{ parameters.module }}/package/resources/deploy.sql
+    workingDirectory: $(Pipeline.Workspace)/${{ parameters.module }}/package/resources
     serverResourceGroup: ${{ parameters.serverResourceGroup }}
     server: ${{ parameters.server }}
     adminLogin: ${{ parameters.adminLogin }}

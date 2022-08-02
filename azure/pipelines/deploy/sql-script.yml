@@ -15,6 +15,10 @@ parameters:
 - name: script
   type: string
   displayName: "Path to SQL script to execute. The deployment will be skipped if this file doesn't exist."
+- name: workingDirectory
+  type: string
+  displayName: 'Optional working directory for the script.'
+  default: ''
 - name: serverResourceGroup
   type: string
   displayName: 'SQL server resource group name.'
@@ -87,6 +91,8 @@ steps:
   inputs:
     filename: Sqlcmd
     arguments: '-S ${{ parameters.server }} -U ${{ parameters.adminLogin }} -P ${{ parameters.adminPassword }} -d ${{ parameters.database }} -i ${{ parameters.script }} -I'
+    workingDirectory: ''
+    failOnStdErr: true
   condition: and(succeeded(), ne(variables['skipSqlScript'], 'true'))
 
 - ${{ if ne(variables['skipSqlScript'], 'true') }}:
