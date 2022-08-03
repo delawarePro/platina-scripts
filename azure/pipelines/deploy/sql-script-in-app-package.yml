@@ -71,7 +71,7 @@ steps:
     azureSubscription: ${{ parameters.azureSubscription }}
     variablePrefix: ${{ parameters.variablePrefix }}
     module: ${{ parameters.module }}
-    script: (Pipeline.Workspace)/${{ parameters.module }}/package/resources/deploy.sql
+    script: $(Pipeline.Workspace)/${{ parameters.module }}/package/resources/deploy.sql
     serverResourceGroup: ${{ parameters.serverResourceGroup }}
     server: ${{ parameters.server }}
     adminLogin: ${{ parameters.adminLogin }}
