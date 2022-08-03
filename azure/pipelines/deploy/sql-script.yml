@@ -70,7 +70,7 @@ steps:
           Write-Host "##vso[task.setVariable variable=skipSqlScript]true"
       }
       Else {
-          $scriptPath = Split-Path -Path "C:\WINDOWS\system32\WindowsPowerShell\V1.0\about_*.txt"
+          $scriptPath = Split-Path -Path "${{ parameters.script }}"
 
           Write-Host "Preconditions have been met to continue sql script deployment."
           Write-Host "Script:       '${{ parameters.script }}'"
