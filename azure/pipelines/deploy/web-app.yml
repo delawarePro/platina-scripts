@@ -12,33 +12,33 @@ parameters:
   displayName: 'Platina module name.'
 - name: webApp
   type: string
-  displayName: 'Web application resource name'
+  displayName: 'Web application resource name.'
 - name: webAppResourceGroup
   type: string
-  displayName: 'Web application resource group name'
+  displayName: 'Web application resource group name.'
 - name: webAppSlot
   type: string
-  displayName: 'Web application deployment slot name'
+  displayName: 'Web application deployment slot name.'
   default: production
 - name: package
   type: string
-  displayName: "Path to zip package to deploy. The deployment will be skipped if this file doesn't exist."
+  displayName: 'Path to zip package to deploy. The deployment will be skipped if this file doesn''t exist.'
 - name: deploymentType
   type: string
-  displayName: "Deployment type for the AzureRmWebAppDeployment task."
+  displayName: 'Deployment type for the AzureRmWebAppDeployment task.'
   default: zipDeploy
 - name: label
   type: string
-  displayName: "Optional label to prefix steps in pipeline."
+  displayName: 'Optional label to prefix steps in pipeline.'
   default:
 - name: postStagingSteps
   type: stepList
   default: []
-  displayName: "Optional steps to execute after staging slot deploy, before swapping slots (e.g. smoke testing)."
+  displayName: 'Optional steps to execute after staging slot deploy, before swapping slots (e.g. smoke testing).'
 - name: postDeploySteps
   type: stepList
   default: []
-  displayName: "Optional steps to execute after production slot deploy, before cleaning up the old slot (when applicable)."
+  displayName: 'Optional steps to execute after production slot deploy, before cleaning up the old slot (when applicable).'
 
 steps:
 - task: PowerShell@2

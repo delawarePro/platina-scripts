@@ -1,0 +1,101 @@
+# Executes a SQL script on a Azure SQL Database.
+# There are some parameters we don't use yet, this is for future proofing so that we could change e.g. firewall settings.
+# See e.g. https://docs.microsoft.com/en-us/azure/devops/pipelines/targets/azure-sqldb?view=azure-devops&tabs=yaml
+parameters:
+- name: azureSubscription
+  type: string
+  displayName: 'Azure Subscription to deploy to.'
+- name: variablePrefix
+  type: string
+  displayName: 'Prefix used in output variables from Platina provision CLI.'
+  default: 'Platina'
+- name: module
+  type: string
+  displayName: 'Platina module name.'
+- name: script
+  type: string
+  displayName: 'Path to SQL script to execute. The deployment will be skipped if this file doesn''t exist.'
+- name: serverResourceGroup
+  type: string
+  displayName: 'SQL server resource group name.'
+- name: server
+  type: string
+  displayName: 'Fully qualified domain name of the SQL server.'
+- name: adminLogin
+  type: string
+  displayName: 'SQL admin username.'
+- name: adminPassword
+  type: string
+  displayName: 'SQL admin password.'
+- name: database
+  type: string
+  displayName: 'SQL database name.'
+- name: label
+  type: string
+  displayName: 'Optional label to prefix steps in pipeline.'
+  default:
+- name: preDeploySteps
+  type: stepList
+  default: []
+  displayName: 'Optional steps to execute before executing SQL script.'
+- name: postDeploySteps
+  type: stepList
+  default: []
+  displayName: 'Optional steps to execute after SQL script execution.'
+
+steps:
+- task: PowerShell@2
+  displayName: '${{ coalesce(parameters.label, parameters.module) }} - Check preconditions'
+  inputs:
+    targetType: 'inline'
+    script: |
+      If (-Not (Test-Path '${{ parameters.script }}' -PathType Leaf)) {
+          Write-Host "SQL script doesn't exist."
+          Write-Host "##vso[task.setVariable variable=skipSqlScript]true"
+      }
+      ElseIf (('${{ parameters.server }}' -like '$(*)') -Or ('${{ parameters.server }}' -eq '')) {
+          Write-Host "Server not set."
+          Write-Host "##vso[task.setVariable variable=skipSqlScript]true"
+      }
+      ElseIf (('${{ parameters.adminLogin }}' -like '$(*)') -Or ('${{ parameters.adminLogin }}' -eq '')) {
+          Write-Host "Admin login not set."
+          Write-Host "##vso[task.setVariable variable=skipSqlScript]true"
+      }
+      ElseIf (('${{ parameters.adminPassword }}' -like '$(*)') -Or ('${{ parameters.adminPassword }}' -eq '')) {
+          Write-Host "Admin password not set."
+          Write-Host "##vso[task.setVariable variable=skipSqlScript]true"
+      }
+      ElseIf (('${{ parameters.database }}' -like '$(*)') -Or ('${{ parameters.database }}' -eq '')) {
+          Write-Host "Database not set."
+          Write-Host "##vso[task.setVariable variable=skipSqlScript]true"
+      }
+      Else {
+          $scriptPath = Split-Path -Path "${{ parameters.script }}"
+
+          Write-Host "Preconditions have been met to continue sql script deployment."
+          Write-Host "Script:       '${{ parameters.script }}'"
+          Write-Host "Script path:  '$scriptPath'"
+          Write-Host "Server:       '${{ parameters.server }}'"
+          Write-Host "Admin login:  '${{ parameters.adminLogin }}'"
+          Write-Host "Database:     '${{ parameters.database }}'"
+          Write-Host "##vso[task.setVariable variable=skipSqlScript]false"
+
+          Write-Host "##vso[task.setVariable variable=scriptPath]$scriptPath"
+      }
+
+- ${{ if ne(variables['skipSqlScript'], 'true') }}:
+  - ${{ each step in parameters.preDeploySteps }}:
+    - ${{ step }} 
+    
+- task: CmdLine@1
+  displayName: '${{ coalesce(parameters.label, parameters.module) }} - Execute SQL script'
+  inputs:
+    filename: Sqlcmd
+    arguments: '-S ${{ parameters.server }} -U ${{ parameters.adminLogin }} -P ${{ parameters.adminPassword }} -d ${{ parameters.database }} -i ${{ parameters.script }} -I -v scriptPath="$(scriptPath)"'
+    workingDirectory: $(scriptPath)
+    failOnStdErr: true
+  condition: and(succeeded(), ne(variables['skipSqlScript'], 'true'))
+
+- ${{ if ne(variables['skipSqlScript'], 'true') }}:
+  - ${{ each step in parameters.postDeploySteps }}:
+    - ${{ step }} 
