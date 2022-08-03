@@ -1,4 +1,4 @@
-# Executes SQL script embedded in web-app package file.
+# Executes SQL script embedded in app package file.
 # All scripts located in 'resources' directory of the zip file will be extracted.
 # resources/deploy.sql will be executed
 parameters:
@@ -14,7 +14,7 @@ parameters:
   displayName: 'Platina module name.'
 - name: package
   type: string
-  displayName: 'Path to zip package of the web app. The deployment will be skipped if this file doesn''t exist.'
+  displayName: 'Path to zip package of the app. The deployment will be skipped if this file doesn''t exist.'
 - name: serverResourceGroup
   type: string
   displayName: 'SQL server resource group name.'
@@ -54,7 +54,7 @@ steps:
           Write-Host "##vso[task.setVariable variable=skipSqlScript]true"
       }
       Else {
-          Write-Host "Preconditions have been met to continue sql script in web app deployment."
+          Write-Host "Preconditions have been met to continue sql script deployment in app package."
           Write-Host 'Package: ''${{ parameters.package }}'''
           Write-Host "##vso[task.setVariable variable=skipSqlScript]false"
       }
