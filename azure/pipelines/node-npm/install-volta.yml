@@ -1,0 +1,32 @@
+steps:
+- bash: |
+   echo "Downloading Volta..."
+   curl https://get.volta.sh | bash -s -- --skip-setup
+
+   echo "Preparing environment variables..."
+   export VOLTA_HOME="$HOME/.volta"
+   export PATH="$VOLTA_HOME/bin:$PATH"
+   
+   echo "##vso[task.setvariable variable=VOLTA_HOME]$VOLTA_HOME"
+   echo "##vso[task.setvariable variable=PATH]$PATH"
+   
+   echo "Starting installation..."
+   volta setup --verbose
+  condition: or(eq( variables['Agent.OS'], 'Linux' ), eq( variables['Agent.OS'], 'Darwin' ))
+  displayName: Install Volta for Unix
+- powershell: |
+   $voltaVersion = "1.0.8"
+   $voltaFileName = "volta-${voltaVersion}-windows-x86_64.msi"
+   Write-Host "Downloading ${voltaFileName}..."
+   Invoke-WebRequest https://github.com/volta-cli/volta/releases/download/v${voltaVersion}/${voltaFileName} -OutFile $(System.DefaultWorkingDirectory)\${voltaFileName}
+   
+   Write-Host "Starting installation..."
+   Start-Process $(System.DefaultWorkingDirectory)\${voltaFileName} -ArgumentList "/quiet" -Wait
+   
+   Write-Host "Updating PATH..."
+   $env:PATH = "C:\Program Files\Volta\;$env:PATH"
+   Write-Host "##vso[task.setvariable variable=PATH]C:\Program Files\Volta\;$env:PATH"
+   
+   Write-Host $env:PATH
+  condition: eq( variables['Agent.OS'], 'Windows_NT' )
+  displayName: Install Volta for Windows
