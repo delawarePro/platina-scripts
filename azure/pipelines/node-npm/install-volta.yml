@@ -18,7 +18,7 @@ steps:
   condition: or(eq( variables['Agent.OS'], 'Linux' ), eq( variables['Agent.OS'], 'Darwin' ))
   displayName: Install Volta for Unix
 - powershell: |
-   $voltaVersion = "1.0.8"
+   $voltaVersion = "1.1.0"
    $voltaFileName = "volta-${voltaVersion}-windows-x86_64.msi"
    Write-Host "Downloading ${voltaFileName}..."
    Invoke-WebRequest https://github.com/volta-cli/volta/releases/download/v${voltaVersion}/${voltaFileName} -OutFile $(System.DefaultWorkingDirectory)\${voltaFileName}
