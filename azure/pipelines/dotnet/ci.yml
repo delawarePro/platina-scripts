@@ -25,6 +25,10 @@ parameters:
   type: string
   default: ''
   displayName: 'Optional arguments to pass to test runner.'
+- name: AfterBuildSteps
+  type: stepList
+  default: []
+  displayName: 'Optional steps to execute after build execution.'
 - name: BeforeTestsSteps
   type: stepList
   default: []
@@ -158,6 +162,9 @@ steps:
     projects: ${{ parameters.Solution }}
     arguments: '--configuration ${{ parameters.BuildConfiguration }} /p:Platform="${{ parameters.BuildPlatform }}" --no-restore'
   condition: succeededOrFailed()
+
+- ${{ each step in parameters.AfterBuildSteps }}:
+  - ${{ step }} 
 
 - ${{ if eq(parameters.WithPack, 'true') }}:
   - task: DotNetCoreCLI@2
