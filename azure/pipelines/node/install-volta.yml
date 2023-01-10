@@ -9,6 +9,12 @@ parameters:
 
 steps:
   - bash: |
+      if [[ "${{parameters.voltaVersion}}" == 1.0* ]]
+      then
+        echo "Version ${{parameters.voltaVersion}} is not supported. Only 1.1.0 and up are allowed."
+        exit 1      
+      fi
+
       echo "Downloading Volta..."
       curl https://get.volta.sh | bash -s -- --version ${{parameters.voltaVersion}} --skip-setup
 
