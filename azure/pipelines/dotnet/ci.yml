@@ -73,10 +73,10 @@ parameters:
   displayName: 'Names of external NuGet feed links. '
 - name: WithNuGetCache
   type: boolean
-  default: true
+  default: false
   displayName: 'Whether to cache NuGet packages. NUGET_PACKAGES environment variable still needs to be set though.'
 
-- name: azureSubscription
+- name: AzureSubscription
   type: string
   default: ''
   displayName: 'Optional Azure Subscription to run ''dotnet test'' under Azure CLI context. So you can access Azure resources (like App Configuration, Key Vault, etc) with authenticated credentials.'
