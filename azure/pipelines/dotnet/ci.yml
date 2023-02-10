@@ -211,25 +211,17 @@ steps:
     - ${{ step }} 
 
 - ${{ if and( eq(parameters.WithPack, 'true'), eq(parameters.WithRelease, 'true') ) }}:
-  - ${{ if eq(parameters.InternalFeedName, '') }}:
-    # Push NuGets to external feed.
-    - task: NuGetCommand@2
-      displayName: 'NuGet Push'
-      inputs:
-        command: 'push'
-        packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg;$(Build.ArtifactStagingDirectory)/*.snupkg;!$(Build.ArtifactStagingDirectory)/*.symbols.nupkg'
-        nuGetFeedType: 'external'
-        publishFeedCredentials: $(externalFeedCredentials)
-
-  - ${{ if ne(parameters.InternalFeedName, '') }}:
-    # Push NuGets to internal feed.
-    - task: NuGetCommand@2
-      displayName: 'NuGet Push'
-      inputs:
-        command: 'push'
-        packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg;$(Build.ArtifactStagingDirectory)/*.snupkg;!$(Build.ArtifactStagingDirectory)/*.symbols.nupkg'
-        nuGetFeedType: 'internal'
-        publishVstsFeed: ${{ parameters.InternalFeedName }}
+  - task: DotNetCoreCLI@2
+    displayName: 'DotNuet Push'
+    inputs:
+      command: 'push'
+      packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg;$(Build.ArtifactStagingDirectory)/*.snupkg;!$(Build.ArtifactStagingDirectory)/*.symbols.nupkg'
+    ${{ if eq(parameters.InternalFeedName, '') }}:
+      nuGetFeedType: 'external'
+      publishFeedCredentials: $(externalFeedCredentials)
+    ${{ if ne(parameters.InternalFeedName, '') }}:
+      nuGetFeedType: 'internal'
+      publishVstsFeed: ${{ parameters.InternalFeedName }}
 
   # The above task does publish the .snupkgs, but Visual Studio can't seem to consume them from the artifact feed yet?
   # Therefore, also publish the .pdb to the SymbolServer of this organization.
