@@ -84,7 +84,7 @@ parameters:
 - name: PostBuildDotnetArgs
   type: string
   default: '--no-restore --no-build'
-  displayName: 'Arguments passed to dotnet commander  post build dotnet tasks like test, pack and publish.'
+  displayName: 'Arguments passed to dotnet commander post build dotnet tasks like test, pack and publish.'
 
 steps:
 - ${{ if ne(parameters.NuGetToolVersion, '') }}:
@@ -187,7 +187,7 @@ steps:
           # Ignore msbuild errors because targets might not be present in projects.
           exit 0;
 
-  - ${{ if eq(parameters.azureSubscription, '') }}:
+  - ${{ if eq(parameters.AzureSubscription, '') }}:
     - task: DotNetCoreCLI@2
       displayName: 'DotNet Test'
       inputs:
@@ -200,7 +200,7 @@ steps:
     - task: AzureCLI@2
       displayName: 'DotNet Test (AzureCLI)'
       inputs:
-        azureSubscription: ${{ parameters.azureSubscription }}
+        azureSubscription: ${{ parameters.AzureSubscription }}
         scriptType: 'pscore'
         scriptLocation: 'inlineScript'
         inlineScript: 'dotnet test ${{ parameters.Solution }} --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestArguments }}'
