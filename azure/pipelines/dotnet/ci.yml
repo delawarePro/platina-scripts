@@ -61,7 +61,7 @@ parameters:
   displayName: 'Specifc NuGet tool version to use.'
 - name: NuGetConfigPath
   type: string
-  default: '.nuget/NuGet.Config'
+  default: ''
   displayName: 'Path to NuGet.config file.'
 - name: InternalFeedName
   type: string
@@ -103,12 +103,6 @@ steps:
       version: ${{ parameters.DotNetSdkVersion }}
       includePreviewVersions: true
 
-- ${{ if ne(parameters.ExternalFeedCredentials, '') }}:
-  - task: NuGetAuthenticate@0
-    displayName: 'NuGet Authenticate'
-    inputs:
-      nuGetServiceConnections: ${{ parameters.ExternalFeedCredentials }}
-
 - ${{ if eq(parameters.WithNuGetCache, 'true') }}:
   # As we don't use package lock files, we want to make sure our cache isn't too far behind the dotnet restore.
   # We mainly want to optimize waiting for PR builds.
@@ -131,6 +125,7 @@ steps:
     ${{ if parameters.NuGetConfigPath }}:
       feedsToUse: 'config'
       nugetConfigPath: ${{ parameters.NuGetConfigPath }}
+    ${{ if parameters.externalFeedCredentials }}:
       externalFeedCredentials: ${{ parameters.ExternalFeedCredentials }}
       restoreArguments: --locked-mode
 
