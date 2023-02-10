@@ -122,8 +122,8 @@ steps:
   inputs: 
     command: 'restore'
     projects: ${{ parameters.Solution }}
+    feedsToUse: 'config'
     ${{ if parameters.NuGetConfigPath }}:
-      feedsToUse: 'config'
       nugetConfigPath: ${{ parameters.NuGetConfigPath }}
     ${{ if parameters.externalFeedCredentials }}:
       externalFeedCredentials: ${{ parameters.ExternalFeedCredentials }}
