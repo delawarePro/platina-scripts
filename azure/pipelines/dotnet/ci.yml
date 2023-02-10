@@ -140,7 +140,7 @@ steps:
     inputs:
       targetType: 'inline'
       script: |
-        &'C:\Program Files\dotnet\dotnet.exe' msbuild /target:BeginPlatinaTestInit '${{ parameters.Solution }}'
+        dotnet msbuild /target:BeginPlatinaTestInit '${{ parameters.Solution }}'
         # Ignore msbuild errors because targets might not be present in projects.
         exit 0;
 
@@ -174,7 +174,7 @@ steps:
     inputs:
       command: 'publish'
       projects: ${{ parameters.Solution }}
-      arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} --output $(Build.ArtifactStagingDirectory)\packages'
+      arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} --output $(Build.ArtifactStagingDirectory)/packages'
       publishWebProjects: false
       modifyOutputPath: false
       zipAfterPublish: false
@@ -188,7 +188,7 @@ steps:
       inputs:
         targetType: 'inline'
         script: |
-          &'C:\Program Files\dotnet\dotnet.exe' msbuild /target:EndPlatinaTestInit '${{ parameters.Solution }}'
+          dotnet msbuild /target:EndPlatinaTestInit '${{ parameters.Solution }}'
           # Ignore msbuild errors because targets might not be present in projects.
           exit 0;
 
@@ -257,5 +257,5 @@ steps:
   - task: PublishPipelineArtifact@1
     displayName: 'Add publish output to pipeline artifacts'
     inputs:
-      path: '$(Build.ArtifactStagingDirectory)\packages'
+      path: '$(Build.ArtifactStagingDirectory)/packages'
       artifactName: 'packages'
