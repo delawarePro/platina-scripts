@@ -140,13 +140,6 @@ steps:
         exit 0;
 
 - task: DotNetCoreCLI@2
-  displayName: 'DotNet Tool Restore'
-  inputs: 
-    command: 'custom'
-    custom: 'tool'
-    arguments: 'restore'
-
-- task: DotNetCoreCLI@2
   displayName: 'DotNet Build'
   inputs:
     command: 'build'
