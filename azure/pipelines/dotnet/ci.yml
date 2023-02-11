@@ -8,7 +8,7 @@ parameters:
   type: string
   default: 'Release'
   displayName: 'Configuration name to build.'
-- name: buildPlatform
+- name: BuildPlatform
   type: string
   default: 'Any CPU'
   displayName: 'Platform name to build.'
