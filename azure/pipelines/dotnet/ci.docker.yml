@@ -39,7 +39,7 @@ steps:
         script: |
           Remove-Item -Path "$(Build.ArtifactStagingDirectory)/packages/${{ parameters.PackageName }}/*" -Force -Recurse
           $container = @{
-            repository = '${{ variables.containerRepository }}'
-            version = '${{ variables.containerVersionPrefix }}.$(Build.BuildNumber)'
+            repository = '${{ parameters.Repository }}'
+            version = '${{ parameters.Version }}'
           }
           $container | ConvertTo-Json | New-Item -Path "$(Build.ArtifactStagingDirectory)/packages/${{ parameters.PackageName }}/" -Name "container.json" -ItemType "file"
