@@ -26,7 +26,7 @@ steps:
         command: buildAndPush
         dockerfile: ${{ parameters.Dockerfile }}
         buildContext: $(Build.ArtifactStagingDirectory)/packages/${{ parameters.PackageName }}
-        containerRegistry: ${{ parameters.Repository }}
+        containerRegistry: ${{ parameters.Registry }}
         repository: ${{ parameters.Repository }}
         tags: ${{ parameters.Version }}
     
