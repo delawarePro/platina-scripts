@@ -151,26 +151,6 @@ steps:
     projects: ${{ parameters.Solution }}
     arguments: '--configuration ${{ parameters.BuildConfiguration }} /p:Platform="${{ parameters.BuildPlatform }}" --no-restore'
 
-- ${{ if eq(parameters.WithPack, 'true') }}:
-  - task: DotNetCoreCLI@2
-    displayName: 'DotNet Pack'
-    inputs:
-      command: 'custom'
-      custom: 'pack'
-      projects: ${{ parameters.Solution }}
-      arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} --output $(Build.ArtifactStagingDirectory)'
-
-- ${{ if eq(parameters.WithPublish, 'true') }}:
-  - task: DotNetCoreCLI@2
-    displayName: 'DotNet Publish'
-    inputs:
-      command: 'publish'
-      projects: ${{ parameters.Solution }}
-      arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} --output $(Build.ArtifactStagingDirectory)/packages'
-      publishWebProjects: false
-      modifyOutputPath: false
-      zipAfterPublish: false
-
 - ${{ if ne(parameters.NoTests, 'true') }}:
   - ${{ each step in parameters.BeforeTestsSteps }}:
     - ${{ step }} 
@@ -213,6 +193,26 @@ steps:
 
   - ${{ each step in parameters.AfterTestsSteps }}:
     - ${{ step }} 
+
+- ${{ if eq(parameters.WithPack, 'true') }}:
+  - task: DotNetCoreCLI@2
+    displayName: 'DotNet Pack'
+    inputs:
+      command: 'custom'
+      custom: 'pack'
+      projects: ${{ parameters.Solution }}
+      arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} --output $(Build.ArtifactStagingDirectory)'
+
+- ${{ if eq(parameters.WithPublish, 'true') }}:
+  - task: DotNetCoreCLI@2
+    displayName: 'DotNet Publish'
+    inputs:
+      command: 'publish'
+      projects: ${{ parameters.Solution }}
+      arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} --output $(Build.ArtifactStagingDirectory)/packages'
+      publishWebProjects: false
+      modifyOutputPath: false
+      zipAfterPublish: false
 
 - ${{ if and( eq(parameters.WithRelease, 'true'), or( eq(parameters.WithPack, 'true'), eq(parameters.WithPublish, 'true') ) ) }}:
   - ${{ each step in parameters.BeforeReleaseSteps }}:
