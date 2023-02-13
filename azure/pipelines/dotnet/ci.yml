@@ -44,11 +44,11 @@ parameters:
   
 - name: WithPack
   type: boolean
-  default: false
+  default: true
   displayName: 'Whether to run ''dotnet package''.'
 - name: WithPublish
   type: boolean
-  default: false
+  default: true
   displayName: 'Whether to run ''dotnet publish'' and publish to pipeline artifacts.'
 - name: WithRelease
   type: boolean
