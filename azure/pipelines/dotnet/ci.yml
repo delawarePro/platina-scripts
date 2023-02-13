@@ -132,6 +132,15 @@ steps:
         # Ignore msbuild errors because targets might not be present in projects.
         exit 0;
 
+# DotNet restore doesn't restore tools in ./config/dotnet-tools.json, although documentation seems to indicate otherwise.
+# https://learn.microsoft.com/en-us/dotnet/core/tools/global-tools
+- task: DotNetCoreCLI@2
+  displayName: 'DotNet Tool Restore'
+  inputs: 
+    command: 'custom'
+    custom: 'tool'
+    arguments: 'restore'
+
 - task: DotNetCoreCLI@2
   displayName: 'DotNet Build'
   inputs:
