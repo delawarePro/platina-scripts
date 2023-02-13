@@ -2,7 +2,8 @@
 parameters:
 - name: Solution
   type: string
-  displayName: 'Solution to process.'
+  default: '*.sln'
+  displayName: 'Optional solution to process, use this if you have multiple solutions.'
 
 - name: BuildConfiguration
   type: string
@@ -65,8 +66,8 @@ parameters:
   displayName: 'Specifc NuGet tool version to use.'
 - name: NuGetConfigPath
   type: string
-  default: ''
-  displayName: 'Path to NuGet.config file.'
+  default: 'nuget.config'
+  displayName: 'Typically located at solution level, override for custom location.'
 - name: InternalFeedName
   type: string
   default: ''
