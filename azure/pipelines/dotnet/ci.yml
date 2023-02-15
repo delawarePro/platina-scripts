@@ -17,6 +17,10 @@ parameters:
   type: string
   default: ''
   displayName: 'Specific .NET SDK version to use.'
+- name: PostBuildDotnetArgs
+  type: string
+  default: '--no-restore --no-build'
+  displayName: 'Arguments passed to dotnet commander post build dotnet tasks like test, pack and publish.'
 
 - name: TestProjectsGlob
   type: string
@@ -82,10 +86,9 @@ parameters:
   default: ''
   displayName: 'Optional Azure Subscription to run ''dotnet test'' under Azure CLI context. So you can access Azure resources (like App Configuration, Key Vault, etc) with authenticated credentials.'
 
-- name: PostBuildDotnetArgs
+- name: ContainerRegistry
   type: string
-  default: '--no-restore --no-build'
-  displayName: 'Arguments passed to dotnet commander post build dotnet tasks like test, pack and publish.'
+  displayName: 'Optional container registry connection to push container to.'
 
 steps:
 - ${{ if ne(parameters.DotNetSdkVersion, '') }}:
@@ -245,6 +248,37 @@ steps:
       SymbolServerType: 'TeamServices'
 
 - ${{ if and( eq(parameters.WithPublish, 'true'), eq(parameters.WithRelease, 'true') ) }}:
+
+  # Publish/push containers 
+  - ${{ if ne(parameters.ContainerRegistry, '') }}:
+  - task: Docker@2
+    displayName: Docker login
+    inputs:
+      command: login
+      containerRegistry: ${{ parameters.Registry }}
+  
+  - task: PowerShell@2
+    displayName: Docker push
+    inputs:
+      targetType: inline
+      script: |
+        $registry = $Env:ENDPOINT_AUTH_PARAMETER_${{ parameters.ContainerRegistry }}_LOGINSERVER
+        Write-Host "Using registry $registry"
+        
+        Get-ChildItem "$(Build.ArtifactStagingDirectory)/packages" -Recurse -Filter container.json |
+          Foreach-Object {
+            $container = Get-Content $_.FullName | ConvertFrom-Json
+            $tag = "$registry/$($container.repository):$($container.version)"
+            
+            Write-Host "Pushing $tag"
+            &docker tag "$($container.repository):$($container.version)" "$tag"
+            &docker push "$tag"
+            
+            # Add registry to container.json
+            $container | Add-Member -MemberType NoteProperty -Name registry -Value $registry -Force
+            $container | ConvertTo-Json | Out-File -FilePath $_.FullName -Force
+          }
+
   # Publish pipeline artifacts.
   - task: PublishPipelineArtifact@1
     displayName: 'Add publish output to pipeline artifacts'
