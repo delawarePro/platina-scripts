@@ -255,7 +255,7 @@ steps:
       displayName: Docker login
       inputs:
         command: login
-        containerRegistry: ${{ parameters.Registry }}
+        containerRegistry: ${{ parameters.ContainerRegistry }}
     
     - task: PowerShell@2
       displayName: Docker push
