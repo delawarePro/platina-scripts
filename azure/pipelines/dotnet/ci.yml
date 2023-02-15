@@ -267,7 +267,7 @@ steps:
         targetType: inline
         script: |
           # How to make this work?
-          #$registry = $Env:ENDPOINT_AUTH_PARAMETER_${{ parameters.Registry }}_LOGINSERVER
+          #$registry = $Env:ENDPOINT_AUTH_PARAMETER_${{ parameters.ContainerRegistry }}_LOGINSERVER
     
           $registry = "${{ parameters.ContainerRegistry }}"
           Write-Host "Using registry $registry"
