@@ -1,0 +1,34 @@
+# Pushes all docker containers for which a container.json file is present in the packages folder.
+parameters:
+- name: Registry
+  type: string
+  displayName: 'Container registry connection to use.'
+
+steps:
+    - task: Docker@2
+      displayName: Docker login
+      inputs:
+        command: login
+        containerRegistry: ${{ parameters.Registry }}
+    
+    - task: PowerShell@2
+      displayName: Docker push
+      inputs:
+        targetType: inline
+        script: |
+          $registry = $Env:ENDPOINT_AUTH_PARAMETER_${{ parameters.Registry }}_LOGINSERVER
+          Write-Host "Using registry $registry"
+
+          Get-ChildItem "$(Build.ArtifactStagingDirectory)/packages" -Recurse -Filter container.json |
+            Foreach-Object {
+              $container = Get-Content $_.FullName | ConvertFrom-Json
+
+              $tag = "$registry/$($container.repository):$($container.version)"
+              Write-Host "Pushing $tag"
+              &docker tag "$($container.repository):$($container.version)" "$tag"
+              &docker push "$tag"
+
+              # Add registry to container.json
+              $container | Add-Member -MemberType NoteProperty -Name registry -Value $registry -Force
+              $container | ConvertTo-Json | Out-File -FilePath $_.FullName -Force
+            }
