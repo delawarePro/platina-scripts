@@ -86,9 +86,12 @@ parameters:
   default: ''
   displayName: 'Optional Azure Subscription to run ''dotnet test'' under Azure CLI context. So you can access Azure resources (like App Configuration, Key Vault, etc) with authenticated credentials.'
 
+- name: ContainerRegistryConnection
+  type: string
+  displayName: 'Optional container registry connection for authentication.'
 - name: ContainerRegistry
   type: string
-  displayName: 'Optional container registry connection to push container to.'
+  displayName: 'Optional container registry login server to push container to.'
 
 steps:
 - ${{ if ne(parameters.DotNetSdkVersion, '') }}:
@@ -250,20 +253,20 @@ steps:
 - ${{ if and( eq(parameters.WithPublish, 'true'), eq(parameters.WithRelease, 'true') ) }}:
 
   # Publish/push containers 
-  - ${{ if ne(parameters.ContainerRegistry, '') }}:
+  - ${{ if and ( ne(parameters.ContainerRegistryConnection, ''), ne(parameters.ContainerRegistry, '') ) }}:
     - task: Docker@2
       displayName: Docker login
       inputs:
         command: login
-        containerRegistry: ${{ parameters.ContainerRegistry }}
+        containerRegistry: ${{ parameters.ContainerRegistryConnection }}
     
     - task: PowerShell@2
       displayName: Docker push
       inputs:
         targetType: inline
-        containerRegistry: ${{ parameters.ContainerRegistry }}
         script: |
-          $registry = $Env:ENDPOINT_AUTH_PARAMETER_${{ parameters.ContainerRegistry }}_LOGINSERVER
+          #$registry = $Env:ENDPOINT_AUTH_PARAMETER_${{ parameters.ContainerRegistry }}_LOGINSERVER
+          $registry = "${{ parameters.ContainerRegistry }}"
           Write-Host "Using registry $registry"
           
           Get-ChildItem "$(Build.ArtifactStagingDirectory)/packages" -Recurse -Filter container.json |
