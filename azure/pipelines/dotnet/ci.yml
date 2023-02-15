@@ -261,6 +261,7 @@ steps:
       displayName: Docker push
       inputs:
         targetType: inline
+        containerRegistry: ${{ parameters.ContainerRegistry }}
         script: |
           $registry = $Env:ENDPOINT_AUTH_PARAMETER_${{ parameters.ContainerRegistry }}_LOGINSERVER
           Write-Host "Using registry $registry"
