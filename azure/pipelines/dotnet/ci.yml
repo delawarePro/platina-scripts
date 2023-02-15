@@ -253,7 +253,7 @@ steps:
 - ${{ if and( eq(parameters.WithPublish, 'true'), eq(parameters.WithRelease, 'true') ) }}:
 
   # Publish/push containers 
-  - ${{ if and ( ne(parameters.ContainerRegistryConnection, ''), ne(parameters.ContainerRegistry, '') ) }}:
+  - ${{ if and( ne(parameters.ContainerRegistryConnection, ''), ne(parameters.ContainerRegistry, '') ) }}:
     - task: Docker@2
       displayName: Docker login
       inputs:
