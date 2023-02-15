@@ -93,7 +93,7 @@ steps:
     targetType: inline
     script: |
       $scriptPath = Split-Path -Path "${{ parameters.script }}"
-      Set-Location scriptPath
+      Set-Location $scriptPath
 
       $vars = "scriptPath=`"$(scriptPath)`""      
       Invoke-Sqlcmd `
