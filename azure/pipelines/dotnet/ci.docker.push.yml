@@ -1,34 +1,40 @@
 # Pushes all docker containers for which a container.json file is present in the packages folder.
 parameters:
-- name: Registry
+- name: RegistryConnection
   type: string
-  displayName: 'Container registry connection to use.'
+  displayName: 'Optional container registry connection for authentication.'
+- name: Registry # We should be able to get login server from connection instead of needing to specify it here.
+  type: string
+  displayName: 'Optional container registry login server to push container to.'
 
 steps:
-    - task: Docker@2
-      displayName: Docker login
-      inputs:
-        command: login
-        containerRegistry: ${{ parameters.Registry }}
-    
-    - task: PowerShell@2
-      displayName: Docker push
-      inputs:
-        targetType: inline
-        script: |
-          $registry = $Env:ENDPOINT_AUTH_PARAMETER_${{ parameters.Registry }}_LOGINSERVER
-          Write-Host "Using registry $registry"
+- task: Docker@2
+  displayName: Docker login
+  inputs:
+    command: login
+    containerRegistry: ${{ parameters.RegistryConnection }}
 
-          Get-ChildItem "$(Build.ArtifactStagingDirectory)/packages" -Recurse -Filter container.json |
-            Foreach-Object {
-              $container = Get-Content $_.FullName | ConvertFrom-Json
+- task: PowerShell@2
+  displayName: Docker push
+  inputs:
+    targetType: inline
+    script: |
+      # How to make this work?
+      #$registry = $Env:ENDPOINT_AUTH_PARAMETER_${{ parameters.Registry }}_LOGINSERVER
 
-              $tag = "$registry/$($container.repository):$($container.version)"
-              Write-Host "Pushing $tag"
-              &docker tag "$($container.repository):$($container.version)" "$tag"
-              &docker push "$tag"
-
-              # Add registry to container.json
-              $container | Add-Member -MemberType NoteProperty -Name registry -Value $registry -Force
-              $container | ConvertTo-Json | Out-File -FilePath $_.FullName -Force
-            }
+      $registry = "${{ parameters.Registry }}"
+      Write-Host "Using registry $registry"
+      
+      Get-ChildItem "$(Build.ArtifactStagingDirectory)/packages" -Recurse -Filter container.json |
+        Foreach-Object {
+          $container = Get-Content $_.FullName | ConvertFrom-Json
+          $tag = "$registry/$($container.repository):$($container.version)"
+          
+          Write-Host "Pushing $tag"
+          &docker tag "$($container.repository):$($container.version)" "$tag"
+          &docker push "$tag"
+          
+          # Add registry to container.json
+          $container | Add-Member -MemberType NoteProperty -Name registry -Value $registry -Force
+          $container | ConvertTo-Json | Out-File -FilePath $_.FullName -Force
+        }

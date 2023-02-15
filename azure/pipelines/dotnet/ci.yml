@@ -89,7 +89,7 @@ parameters:
 - name: ContainerRegistryConnection
   type: string
   displayName: 'Optional container registry connection for authentication.'
-- name: ContainerRegistry
+- name: ContainerRegistry # We should be able to get login server from connection instead of needing to specify it here.
   type: string
   displayName: 'Optional container registry login server to push container to.'
 
@@ -251,38 +251,6 @@ steps:
       SymbolServerType: 'TeamServices'
 
 - ${{ if and( eq(parameters.WithPublish, 'true'), eq(parameters.WithRelease, 'true') ) }}:
-
-  # Publish/push containers 
-  - ${{ if and( ne(parameters.ContainerRegistryConnection, ''), ne(parameters.ContainerRegistry, '') ) }}:
-    - task: Docker@2
-      displayName: Docker login
-      inputs:
-        command: login
-        containerRegistry: ${{ parameters.ContainerRegistryConnection }}
-    
-    - task: PowerShell@2
-      displayName: Docker push
-      inputs:
-        targetType: inline
-        script: |
-          #$registry = $Env:ENDPOINT_AUTH_PARAMETER_${{ parameters.ContainerRegistry }}_LOGINSERVER
-          $registry = "${{ parameters.ContainerRegistry }}"
-          Write-Host "Using registry $registry"
-          
-          Get-ChildItem "$(Build.ArtifactStagingDirectory)/packages" -Recurse -Filter container.json |
-            Foreach-Object {
-              $container = Get-Content $_.FullName | ConvertFrom-Json
-              $tag = "$registry/$($container.repository):$($container.version)"
-              
-              Write-Host "Pushing $tag"
-              &docker tag "$($container.repository):$($container.version)" "$tag"
-              &docker push "$tag"
-              
-              # Add registry to container.json
-              $container | Add-Member -MemberType NoteProperty -Name registry -Value $registry -Force
-              $container | ConvertTo-Json | Out-File -FilePath $_.FullName -Force
-            }
-
   # Publish pipeline artifacts.
   - task: PublishPipelineArtifact@1
     displayName: 'Add publish output to pipeline artifacts'
