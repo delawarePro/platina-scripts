@@ -185,7 +185,10 @@ steps:
         azureSubscription: ${{ parameters.AzureSubscription }}
         scriptType: 'pscore'
         scriptLocation: 'inlineScript'
-        inlineScript: 'dotnet test ${{ parameters.Solution }} --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestArguments }}'
+        inlineScript: |
+          Get-ChildItem -Filter ${{ parameters.Solution }} | Foreach-Object {
+            &dotnet test "$_.FullName" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestArguments }}
+          }
       condition: succeededOrFailed()
 
     - task: PublishTestResults@2
