@@ -158,6 +158,27 @@ steps:
     projects: ${{ parameters.Solution }}
     arguments: '--configuration ${{ parameters.BuildConfiguration }} /p:Platform="${{ parameters.BuildPlatform }}" --no-restore'
 
+# Execute packing and publishing before tests so that tests could optionally use publish output.
+# Next to that, Platina test init will be given more time as well.
+- ${{ if eq(parameters.WithPack, 'true') }}:
+  - task: DotNetCoreCLI@2
+    displayName: 'DotNet Pack'
+    inputs:
+      command: 'pack'
+      packagesToPack: ${{ parameters.Solution }}
+      arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} --output $(Build.ArtifactStagingDirectory)'
+
+- ${{ if eq(parameters.WithPublish, 'true') }}:
+  - task: DotNetCoreCLI@2
+    displayName: 'DotNet Publish'
+    inputs:
+      command: 'publish'
+      projects: ${{ parameters.Solution }}
+      arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} --output $(Build.ArtifactStagingDirectory)/packages'
+      publishWebProjects: false
+      modifyOutputPath: false
+      zipAfterPublish: false
+
 - ${{ if ne(parameters.NoTests, 'true') }}:
   - ${{ each step in parameters.BeforeTestsSteps }}:
     - ${{ step }} 
@@ -205,25 +226,6 @@ steps:
 
   - ${{ each step in parameters.AfterTestsSteps }}:
     - ${{ step }} 
-
-- ${{ if eq(parameters.WithPack, 'true') }}:
-  - task: DotNetCoreCLI@2
-    displayName: 'DotNet Pack'
-    inputs:
-      command: 'pack'
-      packagesToPack: ${{ parameters.Solution }}
-      arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} --output $(Build.ArtifactStagingDirectory)'
-
-- ${{ if eq(parameters.WithPublish, 'true') }}:
-  - task: DotNetCoreCLI@2
-    displayName: 'DotNet Publish'
-    inputs:
-      command: 'publish'
-      projects: ${{ parameters.Solution }}
-      arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} --output $(Build.ArtifactStagingDirectory)/packages'
-      publishWebProjects: false
-      modifyOutputPath: false
-      zipAfterPublish: false
 
 - ${{ if and( eq(parameters.WithRelease, 'true'), or( eq(parameters.WithPack, 'true'), eq(parameters.WithPublish, 'true') ) ) }}:
   - ${{ each step in parameters.BeforeReleaseSteps }}:
