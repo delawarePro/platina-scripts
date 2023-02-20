@@ -174,7 +174,10 @@ steps:
     inputs:
       command: 'publish'
       projects: ${{ parameters.Solution }}
-      arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} --output $(Build.ArtifactStagingDirectory)/packages'
+      # Since .NET SDK 7.0.200 output parameter is not supported anymore on solution builds.
+      # See https://learn.microsoft.com/en-us/dotnet/core/compatibility/sdk/7.0/solution-level-output-no-longer-valid
+      # As we really want to perform solution builds/publishes, we use the workaround to specify the 'PublishDir' property.
+      arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} --property PublishDir=$(Build.ArtifactStagingDirectory)/packages'
       publishWebProjects: false
       modifyOutputPath: false
       zipAfterPublish: false
