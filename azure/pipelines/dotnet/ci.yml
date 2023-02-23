@@ -2,13 +2,14 @@
 parameters:
 - name: Solution
   type: string
-  displayName: 'Solution to process.'
+  default: '*.sln'
+  displayName: 'Optional solution to process, use this if you have multiple solutions.'
 
 - name: BuildConfiguration
   type: string
   default: 'Release'
   displayName: 'Configuration name to build.'
-- name: buildPlatform
+- name: BuildPlatform
   type: string
   default: 'Any CPU'
   displayName: 'Platform name to build.'
@@ -16,6 +17,10 @@ parameters:
   type: string
   default: ''
   displayName: 'Specific .NET SDK version to use.'
+- name: PostBuildDotnetArgs
+  type: string
+  default: '--no-restore --no-build'
+  displayName: 'Arguments passed to dotnet commander post build dotnet tasks like test, pack and publish.'
 
 - name: TestProjectsGlob
   type: string
@@ -54,15 +59,15 @@ parameters:
   type: boolean
   default: false
   displayName: 'Whether to push created NuGets to external feed and/or add publish output to pipeline artifacts.'
+- name: BeforeReleaseSteps
+  type: stepList
+  default: []
+  displayName: 'Optional steps to execute before releasing nugets and artifacts.'
 
-- name: NuGetToolVersion
-  type: string
-  default: ''
-  displayName: 'Specifc NuGet tool version to use.'
 - name: NuGetConfigPath
   type: string
-  default: '.nuget/NuGet.Config'
-  displayName: 'Path to NuGet.config file.'
+  default: 'nuget.config'
+  displayName: 'Typically located at solution level, override for custom location.'
 - name: InternalFeedName
   type: string
   default: ''
@@ -73,28 +78,24 @@ parameters:
   displayName: 'Names of external NuGet feed links. '
 - name: WithNuGetCache
   type: boolean
-  default: true
+  default: false
   displayName: 'Whether to cache NuGet packages. NUGET_PACKAGES environment variable still needs to be set though.'
 
-- name: azureSubscription
+- name: AzureSubscription
   type: string
   default: ''
   displayName: 'Optional Azure Subscription to run ''dotnet test'' under Azure CLI context. So you can access Azure resources (like App Configuration, Key Vault, etc) with authenticated credentials.'
 
-- name: PostBuildDotnetArgs
+- name: ContainerRegistryConnection
   type: string
-  default: '--no-restore --no-build'
-  displayName: 'Arguments passed to dotnet commander  post build dotnet tasks like test, pack and publish.'
+  default: ''
+  displayName: 'Optional container registry connection for authentication.'
+- name: ContainerRegistry # We should be able to get login server from connection instead of needing to specify it here.
+  type: string
+  default: ''
+  displayName: 'Optional container registry login server to push containers to.'
 
 steps:
-- ${{ if ne(parameters.NuGetToolVersion, '') }}:
-  # Hosted build agent windows-2022 doesn't seem to auto select right nuget version, so we allow to set it explicitly.
-  # See https://github.com/actions/virtual-environments/issues/4754
-  - task: NuGetToolInstaller@1
-    displayName: 'Use specific NuGet tool version ${{ parameters.NuGetToolVersion }}'
-    inputs:
-      versionSpec: ${{ parameters.NuGetToolVersion }}
-
 - ${{ if ne(parameters.DotNetSdkVersion, '') }}:
   - task: UseDotNet@2
     displayName: 'Use specific .NET SDK version ${{ parameters.DotNetSdkVersion }}'
@@ -102,12 +103,6 @@ steps:
       packageType: 'sdk'
       version: ${{ parameters.DotNetSdkVersion }}
       includePreviewVersions: true
-
-- ${{ if ne(parameters.ExternalFeedCredentials, '') }}:
-  - task: NuGetAuthenticate@0
-    displayName: 'NuGet Authenticate'
-    inputs:
-      nuGetServiceConnections: ${{ parameters.ExternalFeedCredentials }}
 
 - ${{ if eq(parameters.WithNuGetCache, 'true') }}:
   # As we don't use package lock files, we want to make sure our cache isn't too far behind the dotnet restore.
@@ -131,6 +126,7 @@ steps:
     ${{ if parameters.NuGetConfigPath }}:
       feedsToUse: 'config'
       nugetConfigPath: ${{ parameters.NuGetConfigPath }}
+    ${{ if parameters.externalFeedCredentials }}:
       externalFeedCredentials: ${{ parameters.ExternalFeedCredentials }}
       restoreArguments: --locked-mode
 
@@ -140,10 +136,14 @@ steps:
     inputs:
       targetType: 'inline'
       script: |
-        dotnet msbuild /target:BeginPlatinaTestInit '${{ parameters.Solution }}'
+        Get-ChildItem -Filter ${{ parameters.Solution }} | Foreach-Object {
+          dotnet msbuild /target:BeginPlatinaTestInit "$_"
+        }
         # Ignore msbuild errors because targets might not be present in projects.
         exit 0;
 
+# DotNet restore doesn't restore tools in ./config/dotnet-tools.json, although documentation seems to indicate otherwise.
+# https://learn.microsoft.com/en-us/dotnet/core/tools/global-tools
 - task: DotNetCoreCLI@2
   displayName: 'DotNet Tool Restore'
   inputs: 
@@ -157,16 +157,19 @@ steps:
     command: 'build'
     projects: ${{ parameters.Solution }}
     arguments: '--configuration ${{ parameters.BuildConfiguration }} /p:Platform="${{ parameters.BuildPlatform }}" --no-restore'
-  condition: succeededOrFailed()
 
+# Execute packing and publishing before tests so that tests could optionally use publish output.
+# Next to that, Platina test init will be given more time as well.
 - ${{ if eq(parameters.WithPack, 'true') }}:
   - task: DotNetCoreCLI@2
     displayName: 'DotNet Pack'
     inputs:
-      command: 'custom'
-      custom: 'pack'
-      projects: ${{ parameters.Solution }}
-      arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} --output $(Build.ArtifactStagingDirectory)'
+      command: 'pack'
+      packagesToPack: ${{ parameters.Solution }}
+      # Since .NET SDK 7.0.200 output parameter is not supported anymore on solution builds.
+      # See https://learn.microsoft.com/en-us/dotnet/core/compatibility/sdk/7.0/solution-level-output-no-longer-valid
+      # As we really want to perform solution builds publishes, we use the workaround to specify the 'PackageOutputPath' property.
+      arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} --property PackageOutputPath=$(Build.ArtifactStagingDirectory)/nugets'
 
 - ${{ if eq(parameters.WithPublish, 'true') }}:
   - task: DotNetCoreCLI@2
@@ -174,7 +177,10 @@ steps:
     inputs:
       command: 'publish'
       projects: ${{ parameters.Solution }}
-      arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} --output $(Build.ArtifactStagingDirectory)/packages'
+      # Since .NET SDK 7.0.200 output parameter is not supported anymore on solution builds.
+      # See https://learn.microsoft.com/en-us/dotnet/core/compatibility/sdk/7.0/solution-level-output-no-longer-valid
+      # As we really want to perform solution builds/publishes, we use the workaround to specify the 'PublishDir' property.
+      arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} --property PublishDir=$(Build.ArtifactStagingDirectory)/packages'
       publishWebProjects: false
       modifyOutputPath: false
       zipAfterPublish: false
@@ -188,11 +194,13 @@ steps:
       inputs:
         targetType: 'inline'
         script: |
-          dotnet msbuild /target:EndPlatinaTestInit '${{ parameters.Solution }}'
+          Get-ChildItem -Filter ${{ parameters.Solution }} | Foreach-Object {
+            dotnet msbuild /target:EndPlatinaTestInit "$_"
+          }
           # Ignore msbuild errors because targets might not be present in projects.
           exit 0;
 
-  - ${{ if eq(parameters.azureSubscription, '') }}:
+  - ${{ if eq(parameters.AzureSubscription, '') }}:
     - task: DotNetCoreCLI@2
       displayName: 'DotNet Test'
       inputs:
@@ -205,10 +213,13 @@ steps:
     - task: AzureCLI@2
       displayName: 'DotNet Test (AzureCLI)'
       inputs:
-        azureSubscription: ${{ parameters.azureSubscription }}
+        azureSubscription: ${{ parameters.AzureSubscription }}
         scriptType: 'pscore'
         scriptLocation: 'inlineScript'
-        inlineScript: 'dotnet test ${{ parameters.Solution }} --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestArguments }}'
+        inlineScript: |
+          Get-ChildItem -Filter ${{ parameters.Solution }} | Foreach-Object {
+            &dotnet test "$_" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestArguments }}
+          }
       condition: succeededOrFailed()
 
     - task: PublishTestResults@2
@@ -222,11 +233,15 @@ steps:
   - ${{ each step in parameters.AfterTestsSteps }}:
     - ${{ step }} 
 
+- ${{ if and( eq(parameters.WithRelease, 'true'), or( eq(parameters.WithPack, 'true'), eq(parameters.WithPublish, 'true') ) ) }}:
+  - ${{ each step in parameters.BeforeReleaseSteps }}:
+    - ${{ step }} 
+  
 - ${{ if and( eq(parameters.WithPack, 'true'), eq(parameters.WithRelease, 'true') ) }}:
   - ${{ if eq(parameters.InternalFeedName, '') }}:
     # Push NuGets to external feed.
-    - task: NuGetCommand@2
-      displayName: 'NuGet Push'
+    - task: DotNetCoreCLI@2
+      displayName: 'DotNet Push'
       inputs:
         command: 'push'
         packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg;$(Build.ArtifactStagingDirectory)/*.snupkg;!$(Build.ArtifactStagingDirectory)/*.symbols.nupkg'
@@ -235,8 +250,8 @@ steps:
 
   - ${{ if ne(parameters.InternalFeedName, '') }}:
     # Push NuGets to internal feed.
-    - task: NuGetCommand@2
-      displayName: 'NuGet Push'
+    - task: DotNetCoreCLI@2
+      displayName: 'DotNet Push'
       inputs:
         command: 'push'
         packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg;$(Build.ArtifactStagingDirectory)/*.snupkg;!$(Build.ArtifactStagingDirectory)/*.symbols.nupkg'
@@ -253,6 +268,39 @@ steps:
       SymbolServerType: 'TeamServices'
 
 - ${{ if and( eq(parameters.WithPublish, 'true'), eq(parameters.WithRelease, 'true') ) }}:
+  
+  # Docker login and docker push all containers.
+  - ${{ if and( ne(parameters.ContainerRegistryConnection, ''), ne(parameters.ContainerRegistry, '') ) }}:
+    - task: Docker@2
+      displayName: Docker login
+      inputs:
+        command: login
+        containerRegistry: ${{ parameters.ContainerRegistryConnection }}    
+    - task: PowerShell@2
+      displayName: Docker push
+      inputs:
+        targetType: inline
+        script: |
+          # How to make this work?
+          #$registry = $Env:ENDPOINT_AUTH_PARAMETER_${{ parameters.ContainerRegistry }}_LOGINSERVER
+    
+          $registry = "${{ parameters.ContainerRegistry }}"
+          Write-Host "Using registry $registry"
+          
+          Get-ChildItem "$(Build.ArtifactStagingDirectory)/packages" -Recurse -Filter container.json |
+            Foreach-Object {
+              $container = Get-Content $_.FullName | ConvertFrom-Json
+              $tag = "$registry/$($container.repository):$($container.version)"
+              
+              Write-Host "Pushing $tag"
+              &docker tag "$($container.repository):$($container.version)" "$tag"
+              &docker push "$tag"
+              
+              # Add registry to container.json
+              $container | Add-Member -MemberType NoteProperty -Name registry -Value $registry -Force
+              $container | ConvertTo-Json | Out-File -FilePath $_.FullName -Force
+            }
+
   # Publish pipeline artifacts.
   - task: PublishPipelineArtifact@1
     displayName: 'Add publish output to pipeline artifacts'

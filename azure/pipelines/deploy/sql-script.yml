@@ -86,14 +86,25 @@ steps:
 - ${{ if ne(variables['skipSqlScript'], 'true') }}:
   - ${{ each step in parameters.preDeploySteps }}:
     - ${{ step }} 
-    
-- task: CmdLine@1
-  displayName: '${{ coalesce(parameters.label, parameters.module) }} - Execute SQL script'
+
+- task: PowerShell@2
+  displayName: ${{ coalesce(parameters.label, parameters.module) }} - Execute SQL script'
   inputs:
-    filename: Sqlcmd
-    arguments: '-S ${{ parameters.server }} -U ${{ parameters.adminLogin }} -P ${{ parameters.adminPassword }} -d ${{ parameters.database }} -i ${{ parameters.script }} -I -v scriptPath="$(scriptPath)"'
-    workingDirectory: $(scriptPath)
-    failOnStdErr: true
+    targetType: inline
+    script: |
+      Install-Module -Name SqlServer -AllowPrerelease -Force -Verbose -Scope CurrentUser
+      
+      $scriptPath = Split-Path -Path "${{ parameters.script }}"
+      Set-Location $scriptPath
+
+      $vars = "scriptPath=`"$(scriptPath)`""      
+      Invoke-Sqlcmd `
+        -ServerInstance "${{ parameters.server }}" `
+        -Database "${{ parameters.database }}" `
+        -Username "${{ parameters.adminLogin }}" `
+        -Password "${{ parameters.adminPassword }}" `
+        -InputFile "${{ parameters.script }}" `
+        -Variable $vars
   condition: and(succeeded(), ne(variables['skipSqlScript'], 'true'))
 
 - ${{ if ne(variables['skipSqlScript'], 'true') }}:
