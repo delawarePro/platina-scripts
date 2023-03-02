@@ -217,7 +217,7 @@ steps:
         scriptLocation: 'inlineScript'
         inlineScript: |
           Get-ChildItem -Filter ${{ parameters.Solution }} | Foreach-Object {
-            &dotnet test "$_" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestArguments }}
+            &dotnet test "$($_.FullName)" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestArguments }}
           }
 
     - task: PublishTestResults@2
