@@ -137,7 +137,7 @@ steps:
       targetType: 'inline'
       script: |
         Get-ChildItem -Filter ${{ parameters.Solution }} | Foreach-Object {
-          dotnet msbuild /target:BeginPlatinaTestInit "$_"
+          dotnet msbuild /target:BeginPlatinaTestInit "$($_.FullName)"
         }
         # Ignore msbuild errors because targets might not be present in projects.
         exit 0;
@@ -195,7 +195,7 @@ steps:
         targetType: 'inline'
         script: |
           Get-ChildItem -Filter ${{ parameters.Solution }} | Foreach-Object {
-            dotnet msbuild /target:EndPlatinaTestInit "$_"
+            dotnet msbuild /target:EndPlatinaTestInit "$($_.FullName)"
           }
           # Ignore msbuild errors because targets might not be present in projects.
           exit 0;
@@ -207,7 +207,6 @@ steps:
         command: 'test'
         projects: ${{ parameters.TestProjectsGlob }}
         arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestArguments }}'
-      condition: succeededOrFailed()
 
   - ${{ else }}:
     - task: AzureCLI@2
@@ -218,9 +217,8 @@ steps:
         scriptLocation: 'inlineScript'
         inlineScript: |
           Get-ChildItem -Filter ${{ parameters.Solution }} | Foreach-Object {
-            &dotnet test "$_" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestArguments }}
+            &dotnet test "$($_.FullName)" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestArguments }}
           }
-      condition: succeededOrFailed()
 
     - task: PublishTestResults@2
       displayName: 'Publish Test Results'
