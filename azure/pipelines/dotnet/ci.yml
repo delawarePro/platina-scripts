@@ -137,7 +137,7 @@ steps:
       targetType: 'inline'
       script: |
         Get-ChildItem -Filter ${{ parameters.Solution }} | Foreach-Object {
-          dotnet msbuild /target:BeginPlatinaTestInit "$_"
+          dotnet msbuild /target:BeginPlatinaTestInit "$_.FullName"
         }
         # Ignore msbuild errors because targets might not be present in projects.
         exit 0;
@@ -195,7 +195,7 @@ steps:
         targetType: 'inline'
         script: |
           Get-ChildItem -Filter ${{ parameters.Solution }} | Foreach-Object {
-            dotnet msbuild /target:EndPlatinaTestInit "$_"
+            dotnet msbuild /target:EndPlatinaTestInit "$_.FullName"
           }
           # Ignore msbuild errors because targets might not be present in projects.
           exit 0;
