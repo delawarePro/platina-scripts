@@ -207,7 +207,6 @@ steps:
         command: 'test'
         projects: ${{ parameters.TestProjectsGlob }}
         arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestArguments }}'
-      condition: succeededOrFailed()
 
   - ${{ else }}:
     - task: AzureCLI@2
@@ -220,7 +219,6 @@ steps:
           Get-ChildItem -Filter ${{ parameters.Solution }} | Foreach-Object {
             &dotnet test "$_" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestArguments }}
           }
-      condition: succeededOrFailed()
 
     - task: PublishTestResults@2
       displayName: 'Publish Test Results'
