@@ -249,7 +249,7 @@ steps:
       displayName: 'DotNet Push'
       inputs:
         command: 'push'
-        packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg;$(Build.ArtifactStagingDirectory)/*.snupkg;!$(Build.ArtifactStagingDirectory)/*.symbols.nupkg'
+        packagesToPush: '$(Build.ArtifactStagingDirectory)/nugets/*.nupkg;$(Build.ArtifactStagingDirectory)/nugets/*.snupkg;!$(Build.ArtifactStagingDirectory)/nugets/*.symbols.nupkg'
         nuGetFeedType: 'external'
         publishFeedCredentials: $(externalFeedCredentials)
 
@@ -259,7 +259,7 @@ steps:
       displayName: 'DotNet Push'
       inputs:
         command: 'push'
-        packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg;$(Build.ArtifactStagingDirectory)/*.snupkg;!$(Build.ArtifactStagingDirectory)/*.symbols.nupkg'
+        packagesToPush: '$(Build.ArtifactStagingDirectory)/nugets/*.nupkg;$(Build.ArtifactStagingDirectory)/nugets/*.snupkg;!$(Build.ArtifactStagingDirectory)/nugets/*.symbols.nupkg'
         nuGetFeedType: 'internal'
         publishVstsFeed: ${{ parameters.InternalFeedName }}
 
