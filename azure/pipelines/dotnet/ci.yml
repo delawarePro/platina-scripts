@@ -251,7 +251,7 @@ steps:
         command: 'push'
         packagesToPush: '$(Build.ArtifactStagingDirectory)/nugets/*.nupkg;$(Build.ArtifactStagingDirectory)/nugets/*.snupkg;!$(Build.ArtifactStagingDirectory)/nugets/*.symbols.nupkg'
         nuGetFeedType: 'external'
-        publishFeedCredentials: $(externalFeedCredentials)
+        publishFeedCredentials: ${{ parameters.ExternalFeedCredentials }}
 
   - ${{ if ne(parameters.InternalFeedName, '') }}:
     # Push NuGets to internal feed.
