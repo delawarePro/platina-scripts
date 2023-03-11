@@ -126,7 +126,7 @@ steps:
     ${{ if parameters.NuGetConfigPath }}:
       feedsToUse: 'config'
       nugetConfigPath: ${{ parameters.NuGetConfigPath }}
-    ${{ if parameters.externalFeedCredentials }}:
+    ${{ if parameters.ExternalFeedCredentials }}:
       externalFeedCredentials: ${{ parameters.ExternalFeedCredentials }}
       restoreArguments: --locked-mode
 
@@ -251,7 +251,7 @@ steps:
         command: 'push'
         packagesToPush: '$(Build.ArtifactStagingDirectory)/nugets/*.nupkg;$(Build.ArtifactStagingDirectory)/nugets/*.snupkg;!$(Build.ArtifactStagingDirectory)/nugets/*.symbols.nupkg'
         nuGetFeedType: 'external'
-        publishFeedCredentials: $(externalFeedCredentials)
+        publishFeedCredentials: ${{ parameters.ExternalFeedCredentials }}
 
   - ${{ if ne(parameters.InternalFeedName, '') }}:
     # Push NuGets to internal feed.
