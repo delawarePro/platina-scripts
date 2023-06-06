@@ -1,0 +1,123 @@
+# Deploys a container application that was provisioned by a Platina compatible CLI.
+#
+# The container app should already have a pre-configured revision with needed environment variables, scaling setting, cpu and memory.
+# This template will only activate a new container image on the pre-configured container app.
+#
+# This template expects a json file that describes the image to deploy, e.g.:
+# {
+#   "registry": "imecpartnerportalscr.azurecr.io"
+#   "repository": "imec.portalshell",
+#   "version": "20230606.4",
+# }
+#
+# A new, environment specific image tag will be created which wille be deployed.
+# This new tag will be guarded against deletes so that purges will not remove the deployed version.
+
+parameters:
+- name: azureSubscription
+  type: string
+  displayName: 'Azure Subscription to deploy to.'
+- name: azureRegistrySubscription
+  type: string
+  displayName: 'Azure Subscription of the Azure Registry.'
+- name: variablePrefix
+  type: string
+  displayName: 'Prefix used in output variables from Platina provision CLI.'
+  default: 'Platina'
+- name: environment
+  type: string
+  displayName: 'Platina environment name.'
+- name: module
+  type: string
+  displayName: 'Platina module name.'
+- name: containerApp
+  type: string
+  displayName: 'Container application resource name.'
+- name: containerAppResourceGroup
+  type: string
+  displayName: 'Containe application resource group name.'
+- name: containerJsonPath
+  type: string
+  displayName: 'Path to the container.json file.'
+- name: preDeploySteps
+  type: stepList
+  default: []
+  displayName: 'Optional steps to execute before deploying container app.'
+- name: postDeploySteps
+  type: stepList
+  default: []
+  displayName: 'Optional steps to execute after deploying container app.'
+
+steps:
+- task: PowerShell@2
+  displayName: '${{ coalesce(parameters.label, parameters.module) }} - Check preconditions'
+  inputs:
+    targetType: 'inline'
+    script: |
+      If (-Not (Test-Path '${{ parameters.containerJsonPath }}' -PathType Leaf)) {
+          Write-Host "'${{ parameters.containerJsonPath }}' file doesn't exist."
+          Write-Host "##vso[task.setVariable variable=skipContainerApp]true"
+      }
+      Else {
+          Write-Host "Preconditions have been met to continue container app deployment."
+          Write-Host "##vso[task.setVariable variable=skipContainerApp]false"
+      }
+
+- ${{ if ne(variables['skipContainerApp'], 'true') }}:
+  - ${{ each step in parameters.preDeploySteps }}:
+    - ${{ step }} 
+ 
+- task: AzureCLI@2
+  displayName: '${{ coalesce(parameters.label, parameters.module) }} - Pin image'
+  inputs:
+    azureSubscription: $(azureRegistrySubscription) # Container registry is typically only available in production subscription.
+    scriptType: 'pscore'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      $container = Get-Content "${{ parameters.containerJsonPath }}" | ConvertFrom-Json
+      $registry = $($container.registry)
+      $image = "$registry/$($container.repository):$($container.version)"
+      
+      # Tag image with a environment specific name so we always keep track of the image that is deployed.
+      $pinnedImage = "$registry/$($container.repository):${{ parameters.environment }}"
+      Write-Host "##vso[task.setvariable variable=pinnedImage]$pinnedImage"
+     
+      Write-Host "Tagging $image as $pinnedImage"
+      az acr import --name $registry --source "$image" --image $pinnedImage --force
+
+      # Disallow deployed image deletion so that it will not automatically cleaned up by purge tasks.
+      Write-Host "Disallowing delete of $pinnedImage"
+      az acr repository update --name $registry --image $pinnedImage --delete-enabled false
+  condition: and(succeeded(), ne(variables['skipContainerApp'], 'true'))
+
+- task: AzureCLI@2
+  displayName: '${{ coalesce(parameters.label, parameters.module) }} - Deploy'
+  inputs:
+    azureSubscription: ${{ parameters['azureSubscription'] }}
+    scriptType: 'pscore'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      $image = "$(pinnedImage)"
+      $containerApp = "${{ parameters.containerApp }}"
+      $resourceGroup = "${{ parameters.containerAppResourceGroup }}"
+      $ts=$(Get-Date -format yyyyMMdd-Hmmss)
+
+      Write-Host "Deploying $image to $containerApp in $resourceGroup"
+
+      # Allow implicit Azure CLI extension install (container app).
+      az config set extension.use_dynamic_install=yes_without_prompt
+
+      # Deploy new revision.
+      # We need to set new environment variable to force new revision creation.
+      az containerapp update `
+        --name $containerApp `
+        --image $image `
+        --container-name $containerApp `
+        --resource-group $resourceGroup `
+        --set-env-vars Deploy__TS=$ts
+
+  condition: and(succeeded(), ne(variables['skipContainerApp'], 'true'))
+
+- ${{ if ne(variables['skipContainerApp'], 'true') }}:
+  - ${{ each step in parameters.postDeploySteps }}:
+    - ${{ step }}
