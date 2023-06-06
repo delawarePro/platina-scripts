@@ -74,7 +74,7 @@ steps:
 - task: AzureCLI@2
   displayName: '${{ coalesce(parameters.label, parameters.module) }} - Pin image'
   inputs:
-    azureSubscription: $(azureRegistrySubscription) # Container registry is typically only available in production subscription.
+    azureSubscription: ${{ parameters.azureRegistrySubscription }} # Container registry is typically only available in production subscription.
     scriptType: 'pscore'
     scriptLocation: 'inlineScript'
     inlineScript: |
