@@ -104,7 +104,7 @@ steps:
       $image = "$(pinnedImage)"
       $containerApp = "${{ parameters.containerApp }}"
       $resourceGroup = "${{ parameters.containerAppResourceGroup }}"
-      $ts=$(Get-Date -format yyyyMMdd-Hmmss)
+      $ts=$(Get-Date -format yyyyMMdd-HHmmss)
 
       Write-Host "Deploying $image to $containerApp in $resourceGroup"
 
