@@ -39,6 +39,10 @@ parameters:
 - name: containerJsonPath
   type: string
   displayName: 'Path to the container.json file.'
+- name: label
+  type: string
+  displayName: 'Optional label to prefix steps in pipeline.'
+  default:
 - name: preDeploySteps
   type: stepList
   default: []
