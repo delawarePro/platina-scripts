@@ -73,26 +73,24 @@ steps:
     - ${{ step }} 
  
 - task: AzureCLI@2
-  displayName: '${{ coalesce(parameters.label, parameters.module) }} - Deploy'
+  displayName: '${{ coalesce(parameters.label, parameters.module) }} - Pin image'
   inputs:
-    azureSubscription: ${{ parameters['azureSubscription'] }}
+    azureSubscription: ${{ parameters.azureRegistrySubscription }} # Container registry is typically only available in production subscription.
     scriptType: 'pscore'
     scriptLocation: 'inlineScript'
     failOnStandardError: true
     inlineScript: |
       $container = Get-Content "${{ parameters.containerJsonPath }}" | ConvertFrom-Json
-      $container = Get-Content "${{ parameters.containerJsonPath }}" | ConvertFrom-Json
       $registry = $($container.registry)
       $repository = $($container.repository)
       $image = "$($repository):$($container.version)"
-      $containerApp = "${{ parameters.containerApp }}"
-      $resourceGroup = "${{ parameters.containerAppResourceGroup }}"
-
+      
       # Allow implicit Azure CLI extension install (container app).
       az config set extension.use_dynamic_install=yes_without_prompt
       
       # Tag image with a environment specific name so we keep track of the image that is deployed.
       $pinnedImage = "$image-${{ parameters.environment }}"
+      Write-Host "##vso[task.setvariable variable=pinnedImage]$pinnedImage"
      
       Write-Host "Tagging $image as $pinnedImage"
       az acr import --name $registry --source "$registry/$image" --image $pinnedImage --force
@@ -123,10 +121,27 @@ steps:
         # Remove tag.
         az acr repository untag --name $registry --image $imageToRemove
       }
+  condition: and(succeeded(), ne(variables['skipContainerApp'], 'true'))
+
+- task: AzureCLI@2
+  displayName: '${{ coalesce(parameters.label, parameters.module) }} - Deploy'
+  inputs:
+    azureSubscription: ${{ parameters['azureSubscription'] }}
+    scriptType: 'pscore'
+    scriptLocation: 'inlineScript'
+    failOnStandardError: true
+    inlineScript: |
+      $container = Get-Content "${{ parameters.containerJsonPath }}" | ConvertFrom-Json
+      $image = "$($container.registry)/$(pinnedImage)"
+      $containerApp = "${{ parameters.containerApp }}"
+      $resourceGroup = "${{ parameters.containerAppResourceGroup }}"
+
+      Write-Host "Deploying $image to $containerApp in $resourceGroup"
+
+      # Allow implicit Azure CLI extension install (container app).
+      az config set extension.use_dynamic_install=yes_without_prompt
 
       # Deploy new revision.
-      $image = "$($container.registry)/$(pinnedImage)"
-      Write-Host "Deploying $image to $containerApp in $resourceGroup"
       az containerapp update --name $containerApp --image $image --container-name $containerApp --resource-group $resourceGroup
   condition: and(succeeded(), ne(variables['skipContainerApp'], 'true'))
 
