@@ -81,7 +81,7 @@ steps:
     failOnStandardError: true
     inlineScript: |
       $container = Get-Content "${{ parameters.containerJsonPath }}" | ConvertFrom-Json
-      $registry = $($container.registry)
+      $registry = $($container.registry -replace '.azurecr.io$')
       $repository = $($container.repository)
       $image = "$($repository):$($container.version)"
       
@@ -102,18 +102,14 @@ steps:
       
       # Gather all tags that are relevant to the deployed environment.
       # This means all images/tags that are currently deployed and the one we're about to deploy.
-      #$revisions = az containerapp revision list --name ${{ parameters.containerApp }} --resource-group ${{ parameters.containerAppResourceGroup }} | ConvertFrom-JSON
-      #if ($LASTEXITCODE -ne 0) { throw 'Unable to get container app revisions.' }
-
+      # Currently deployed images should be available in environment variable.
       $currentImages = "$(${{ parameters.variablePrefix }}${{ parameters.module }}RevisionImages)"
       if (-not $currentImages.Trim()) {
         Write-Warning "No current revision images found in environment, currently deployed image will not be guarded from deletion."
       }
-
-      #$currentTags = @( $revisions | % { $_.properties.template.containers } | % { $_.image.Split(':')[-1] } )
       $currentTags = $currentImages.Split(',') | Where-Object { $_.StartsWith("$repository") } | % { $_.Split(':')[-1] }
-      $currentTags += $pinnedImage.Split(':')[-1]
-      Write-Host "Exluding tags from cleanup: " + $currentTags -join ', '
+      $currentTags += $pinnedImage.Split(':')
+      Write-Host "Exluding tags from cleanup: $($currentTags -join ', ')"
 
       # Remove all tags for this environment that are NOT relevant anymore.
       $allTags = az acr repository show-tags --name $registry --repository $repository | ConvertFrom-JSON
