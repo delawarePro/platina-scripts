@@ -93,7 +93,7 @@ steps:
       Write-Host "##vso[task.setvariable variable=pinnedImage]$pinnedImage"
      
       Write-Host "Tagging $image as $pinnedImage"
-      az acr import --name $registry --source "$registry/$image" --image $pinnedImage --force
+      az acr import --name $registry --source "$($container.registry)/$image" --image $pinnedImage --force
 
       # Disallow deployed image modification/deletion so that it will not automatically cleaned up by purge tasks.
       # In other words, lock the image.
@@ -108,8 +108,8 @@ steps:
         Write-Warning "No current revision images found in environment, currently deployed image will not be guarded from deletion."
       }
       $currentTags = $currentImages.Split(',') | Where-Object { $_.StartsWith("$repository") } | % { $_.Split(':')[-1] }
-      $currentTags += $pinnedImage.Split(':')
-      Write-Host "Exluding tags from cleanup: $($currentTags -join ', ')"
+      $currentTags += $pinnedImage.Split(':')[-1]
+      Write-Host "Exluding tags from cleanup: $($currentTags -join ", ")"
 
       # Remove all tags for this environment that are NOT relevant anymore.
       $allTags = az acr repository show-tags --name $registry --repository $repository | ConvertFrom-JSON
