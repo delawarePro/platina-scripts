@@ -73,24 +73,26 @@ steps:
     - ${{ step }} 
  
 - task: AzureCLI@2
-  displayName: '${{ coalesce(parameters.label, parameters.module) }} - Pin image'
+  displayName: '${{ coalesce(parameters.label, parameters.module) }} - Deploy'
   inputs:
-    azureSubscription: ${{ parameters.azureRegistrySubscription }} # Container registry is typically only available in production subscription.
+    azureSubscription: ${{ parameters['azureSubscription'] }}
     scriptType: 'pscore'
     scriptLocation: 'inlineScript'
     failOnStandardError: true
     inlineScript: |
       $container = Get-Content "${{ parameters.containerJsonPath }}" | ConvertFrom-Json
+      $container = Get-Content "${{ parameters.containerJsonPath }}" | ConvertFrom-Json
       $registry = $($container.registry)
       $repository = $($container.repository)
       $image = "$($repository):$($container.version)"
-      
+      $containerApp = "${{ parameters.containerApp }}"
+      $resourceGroup = "${{ parameters.containerAppResourceGroup }}"
+
       # Allow implicit Azure CLI extension install (container app).
       az config set extension.use_dynamic_install=yes_without_prompt
       
       # Tag image with a environment specific name so we keep track of the image that is deployed.
       $pinnedImage = "$image-${{ parameters.environment }}"
-      Write-Host "##vso[task.setvariable variable=pinnedImage]$pinnedImage"
      
       Write-Host "Tagging $image as $pinnedImage"
       az acr import --name $registry --source "$registry/$image" --image $pinnedImage --force
@@ -103,6 +105,8 @@ steps:
       # Gather all tags that are relevant to the deployed environment.
       # This means all images/tags that are currently deployed and the one we're about to deploy.
       $revisions = az containerapp revision list --name ${{ parameters.containerApp }} --resource-group ${{ parameters.containerAppResourceGroup }} | ConvertFrom-JSON
+      if ($LASTEXITCODE -ne 0) { throw 'Unable to get container app revisions.' }
+
       $currentTags = @( $revisions | % { $_.properties.template.containers } | % { $_.image.Split(':')[-1] } )
       $currentTags += $pinnedImage.Split(':')[-1]
 
@@ -119,28 +123,10 @@ steps:
         # Remove tag.
         az acr repository untag --name $registry --image $imageToRemove
       }
-  condition: and(succeeded(), ne(variables['skipContainerApp'], 'true'))
-
-- task: AzureCLI@2
-  displayName: '${{ coalesce(parameters.label, parameters.module) }} - Deploy'
-  inputs:
-    azureSubscription: ${{ parameters['azureSubscription'] }}
-    scriptType: 'pscore'
-    scriptLocation: 'inlineScript'
-    failOnStandardError: true
-    inlineScript: |
-      $container = Get-Content "${{ parameters.containerJsonPath }}" | ConvertFrom-Json
-      $image = "$($container.registry)/$(pinnedImage)"
-      $containerApp = "${{ parameters.containerApp }}"
-      $resourceGroup = "${{ parameters.containerAppResourceGroup }}"
-      $ts=$(Get-Date -format yyyyMMdd-HHmmss)
-
-      Write-Host "Deploying $image to $containerApp in $resourceGroup"
-
-      # Allow implicit Azure CLI extension install (container app).
-      az config set extension.use_dynamic_install=yes_without_prompt
 
       # Deploy new revision.
+      $image = "$($container.registry)/$(pinnedImage)"
+      Write-Host "Deploying $image to $containerApp in $resourceGroup"
       az containerapp update --name $containerApp --image $image --container-name $containerApp --resource-group $resourceGroup
   condition: and(succeeded(), ne(variables['skipContainerApp'], 'true'))
 
