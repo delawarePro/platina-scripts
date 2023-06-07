@@ -109,8 +109,14 @@ steps:
       $allTags = az acr repository show-tags --name $registry --repository $repository | ConvertFrom-JSON
       $tagsToRemove = $allTags | Where-Object { $_.EndsWith('-${{ parameters.environment }}') } | Where-Object { $_ -notin $currentTags }
       foreach ($tag in $tagsToRemove) {
-        Write-Host "Removing tag: $($repository):$tag"
-        az acr repository untag --name $registry --image "$($repository):$tag"
+        $imageToRemove = "$($repository):$tag"
+        Write-Host "Removing tag: $imageToRemove"
+
+        # Unlock tag.
+        az acr repository update --name $registry --image $imageToRemove --write-enabled true --delete-enabled true
+
+        # Remove tag.
+        az acr repository untag --name $registry --image $imageToRemove
       }
   condition: and(succeeded(), ne(variables['skipContainerApp'], 'true'))
 
