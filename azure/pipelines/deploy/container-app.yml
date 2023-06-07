@@ -80,18 +80,37 @@ steps:
     inlineScript: |
       $container = Get-Content "${{ parameters.containerJsonPath }}" | ConvertFrom-Json
       $registry = $($container.registry)
-      $image = "$registry/$($container.repository):$($container.version)"
+      $repository = $($container.repository)
+      $image = "$registry/$repository:$($container.version)"
       
-      # Tag image with a environment specific name so we always keep track of the image that is deployed.
-      $pinnedImage = "$registry/$($container.repository):${{ parameters.environment }}"
+      # Allow implicit Azure CLI extension install (container app).
+      az config set extension.use_dynamic_install=yes_without_prompt
+      
+      # Tag image with a environment specific name so we keep track of the image that is deployed.
+      $pinnedImage = "$image-${{ parameters.environment }}"
       Write-Host "##vso[task.setvariable variable=pinnedImage]$pinnedImage"
      
       Write-Host "Tagging $image as $pinnedImage"
       az acr import --name $registry --source "$image" --image $pinnedImage --force
 
-      # Disallow deployed image deletion so that it will not automatically cleaned up by purge tasks.
+      # Disallow deployed image modification/deletion so that it will not automatically cleaned up by purge tasks.
+      # In other words, lock the image.
       Write-Host "Disallowing delete of $pinnedImage"
-      az acr repository update --name $registry --image $pinnedImage --delete-enabled false
+      az acr repository update --name $registry --image $pinnedImage --write-enabled false --delete-enabled false
+      
+      # Gather all tags that are relevant to the deployed environment.
+      # This means all images/tags that are currently deployed and the one we're about to deploy.
+      $revisions = az containerapp revision list --name $containerApp --resource-group $resourceGroup | ConvertFrom-JSON
+      $currentTags = @( $revisions | % { $_.properties.template.containers } | % { $_.image.Split(':')[-1] } )
+      $currentTags += $pinnedImage.Split(':')[-1]
+
+      # Remove all tags for this environment that are NOT relevant anymore.
+      $allTags = az acr repository show-tags --name $registry --repository $repository | ConvertFrom-JSON
+      $tagsToRemove = $allTags | Where-Object { $_.EndsWith('-${{ parameters.environment }}') } | Where-Object { $_ -notin $currentTags }
+      foreach ($tag in $tagsToRemove) {
+        Write-Host "Removing tag: $repository:$tag"
+        az acr repository untag --name $registry --image "$repository:$tag"
+      }
   condition: and(succeeded(), ne(variables['skipContainerApp'], 'true'))
 
 - task: AzureCLI@2
@@ -112,14 +131,7 @@ steps:
       az config set extension.use_dynamic_install=yes_without_prompt
 
       # Deploy new revision.
-      # We need to set new environment variable to force new revision creation.
-      az containerapp update `
-        --name $containerApp `
-        --image $image `
-        --container-name $containerApp `
-        --resource-group $resourceGroup `
-        --set-env-vars Deploy__TS=$ts
-
+      az containerapp update --name $containerApp --image $image --container-name $containerApp --resource-group $resourceGroup
   condition: and(succeeded(), ne(variables['skipContainerApp'], 'true'))
 
 - ${{ if ne(variables['skipContainerApp'], 'true') }}:
