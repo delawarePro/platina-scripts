@@ -10,8 +10,9 @@
 #   "version": "20230606.4",
 # }
 #
-# A new, environment specific image tag will be created which wille be deployed.
+# A new, environment specific image tag will be created which will be deployed.
 # This new tag will be guarded against deletes so that purges will not remove the deployed version.
+# Old environment specific tags will be removed.
 
 parameters:
 - name: azureSubscription
@@ -81,7 +82,7 @@ steps:
       $container = Get-Content "${{ parameters.containerJsonPath }}" | ConvertFrom-Json
       $registry = $($container.registry)
       $repository = $($container.repository)
-      $image = "$registry/$repository:$($container.version)"
+      $image = "$registry/$($repository):$($container.version)"
       
       # Allow implicit Azure CLI extension install (container app).
       az config set extension.use_dynamic_install=yes_without_prompt
@@ -108,8 +109,8 @@ steps:
       $allTags = az acr repository show-tags --name $registry --repository $repository | ConvertFrom-JSON
       $tagsToRemove = $allTags | Where-Object { $_.EndsWith('-${{ parameters.environment }}') } | Where-Object { $_ -notin $currentTags }
       foreach ($tag in $tagsToRemove) {
-        Write-Host "Removing tag: $repository:$tag"
-        az acr repository untag --name $registry --image "$repository:$tag"
+        Write-Host "Removing tag: $($repository):$tag"
+        az acr repository untag --name $registry --image "$($repository):$tag"
       }
   condition: and(succeeded(), ne(variables['skipContainerApp'], 'true'))
 
