@@ -86,7 +86,7 @@ steps:
       $image = "$($repository):$($container.version)"
       
       # Allow implicit Azure CLI extension install (container app).
-      az config set extension.use_dynamic_install=yes_without_prompt
+      #az config set extension.use_dynamic_install=yes_without_prompt
       
       # Tag image with a environment specific name so we keep track of the image that is deployed.
       $pinnedImage = "$image-${{ parameters.environment }}"
@@ -105,7 +105,11 @@ steps:
       #$revisions = az containerapp revision list --name ${{ parameters.containerApp }} --resource-group ${{ parameters.containerAppResourceGroup }} | ConvertFrom-JSON
       #if ($LASTEXITCODE -ne 0) { throw 'Unable to get container app revisions.' }
 
-      $currentImages = $(${{ parameters.variablePrefix }}${{ parameters.module }}RevisionImages)
+      $currentImages = "$(${{ parameters.variablePrefix }}${{ parameters.module }}RevisionImages)"
+      if (-not $currentImages.Trim()) {
+        Write-Warning "No current revision images found in environment, currently deployed image will not be guarded from deletion."
+      }
+
       #$currentTags = @( $revisions | % { $_.properties.template.containers } | % { $_.image.Split(':')[-1] } )
       $currentTags = $currentImages.Split(',') | Where-Object { $_.StartsWith("$repository") } | % { $_.Split(':')[-1] }
       $currentTags += $pinnedImage.Split(':')[-1]
