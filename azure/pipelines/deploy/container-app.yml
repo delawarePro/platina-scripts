@@ -5,9 +5,9 @@
 #
 # This template expects a json file that describes the image to deploy, e.g.:
 # {
-#   "registry": "imecpartnerportalscr.azurecr.io"
-#   "repository": "imec.portalshell",
-#   "version": "20230606.4",
+#   "registry": "registrycr.azurecr.io"
+#   "repository": "brand.product",
+#   "version": "20230606.4"
 # }
 #
 # A new, environment specific image tag will be created which will be deployed.
