@@ -82,7 +82,7 @@ steps:
       $container = Get-Content "${{ parameters.containerJsonPath }}" | ConvertFrom-Json
       $registry = $($container.registry)
       $repository = $($container.repository)
-      $image = "$registry/$($repository):$($container.version)"
+      $image = "$($repository):$($container.version)"
       
       # Allow implicit Azure CLI extension install (container app).
       az config set extension.use_dynamic_install=yes_without_prompt
