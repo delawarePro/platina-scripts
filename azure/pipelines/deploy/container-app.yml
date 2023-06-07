@@ -107,7 +107,7 @@ steps:
       if (-not $currentImages.Trim()) {
         Write-Warning "No current revision images found in environment, currently deployed image will not be guarded from deletion."
       }
-      $currentTags = $currentImages.Split(',') | Where-Object { $_.StartsWith("$repository") } | % { $_.Split(':')[-1] }
+      $currentTags = @($currentImages.Split(',') | Where-Object { $_.StartsWith("$repository") } | % { $_.Split(':')[-1] })
       $currentTags += $pinnedImage.Split(':')[-1]
       Write-Host "Exluding tags from cleanup: $($currentTags -join ", ")"
 
