@@ -92,7 +92,7 @@ steps:
       Write-Host "##vso[task.setvariable variable=pinnedImage]$pinnedImage"
      
       Write-Host "Tagging $image as $pinnedImage"
-      az acr import --name $registry --source "$image" --image $pinnedImage --force
+      az acr import --name $registry --source "$registry/$image" --image $pinnedImage --force
 
       # Disallow deployed image modification/deletion so that it will not automatically cleaned up by purge tasks.
       # In other words, lock the image.
