@@ -84,10 +84,7 @@ steps:
       $registry = $($container.registry -replace '.azurecr.io$')
       $repository = $($container.repository)
       $image = "$($repository):$($container.version)"
-      
-      # Allow implicit Azure CLI extension install (container app).
-      #az config set extension.use_dynamic_install=yes_without_prompt
-      
+           
       # Tag image with a environment specific name so we keep track of the image that is deployed.
       $pinnedImage = "$image-${{ parameters.environment }}"
       Write-Host "##vso[task.setvariable variable=pinnedImage]$pinnedImage"
