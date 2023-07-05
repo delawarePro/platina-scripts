@@ -44,6 +44,10 @@ parameters:
   type: string
   displayName: 'Optional label to prefix steps in pipeline.'
   default:
+- name: isJob
+  type: boolean
+  displayName: 'Whether this is a container app job. Defaults to false, which means this is a regular container app and not a container app job.'
+  default: false
 - name: preDeploySteps
   type: stepList
   default: []
@@ -142,7 +146,15 @@ steps:
       az config set extension.use_dynamic_install=yes_without_prompt
 
       # Deploy new revision.
-      az containerapp update --name $containerApp --image $image --container-name $containerApp --resource-group $resourceGroup
+
+      if("${{parameters.isJob}}" -eq "true")
+      {
+          az containerapp job update --name $containerApp --image $image --container-name $containerApp --resource-group $resourceGroup
+      }
+      else
+      {
+          az containerapp update --name $containerApp --image $image --container-name $containerApp --resource-group $resourceGroup
+      }
   condition: and(succeeded(), ne(variables['skipContainerApp'], 'true'))
 
 - ${{ if ne(variables['skipContainerApp'], 'true') }}:
