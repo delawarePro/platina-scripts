@@ -224,7 +224,7 @@ steps:
         scriptLocation: 'inlineScript'
         inlineScript: |
           Get-ChildItem -Filter ${{ parameters.Solution }} | Foreach-Object {
-            &dotnet test "$($_.FullName)" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestArguments }}
+            &dotnet test "$($_.FullName)" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} --collect "Code coverage" ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestArguments }}
           }
 
     - task: PublishTestResults@2
@@ -234,6 +234,11 @@ steps:
         testResultsFiles: '*.trx'
         searchFolder: '$(Agent.TempDirectory)'
       condition: succeededOrFailed()
+    
+    - task: PublishCodeCoverageResults@2
+      displayName: 'Publish Code Coverage Results'
+      inputs:
+        summaryFileLocation: $(Agent.TempDirectory)/**/*.coverage
 
   - ${{ each step in parameters.AfterTestsSteps }}:
     - ${{ step }} 
