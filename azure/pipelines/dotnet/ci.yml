@@ -213,7 +213,7 @@ steps:
       inputs:
         command: 'test'
         projects: ${{ parameters.TestProjectsGlob }}
-        arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestArguments }}'
+        arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} --collect "Code coverage" ${{ parameters.TestArguments }}'
 
   - ${{ else }}:
     - task: AzureCLI@2
