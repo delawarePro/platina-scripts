@@ -32,7 +32,7 @@ parameters:
   displayName: 'Optional arguments to pass to test runner.'
 - name: TestCoverageArguments
   type: string
-  default: '--collect "XPlat Code Coverage"'
+  default: '--collect "Code Coverage"'
   displayName: 'Test coverage arguments for collection.'
 - name: BeforeTestsSteps
   type: stepList
