@@ -30,6 +30,10 @@ parameters:
   type: string
   default: ''
   displayName: 'Optional arguments to pass to test runner.'
+- name: TestCoverageArguments
+  type: string
+  default: '--collect "XPlat Code Coverage"'
+  displayName: 'Test coverage arguments for collection.'
 - name: BeforeTestsSteps
   type: stepList
   default: []
@@ -213,7 +217,7 @@ steps:
       inputs:
         command: 'test'
         projects: ${{ parameters.TestProjectsGlob }}
-        arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} --collect "Code coverage" ${{ parameters.TestArguments }}'
+        arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestCoverageArguments}} ${{ parameters.TestArguments }}'
 
   - ${{ else }}:
     - task: AzureCLI@2
@@ -224,7 +228,7 @@ steps:
         scriptLocation: 'inlineScript'
         inlineScript: |
           Get-ChildItem -Filter ${{ parameters.Solution }} | Foreach-Object {
-            &dotnet test "$($_.FullName)" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} --collect "Code coverage" ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestArguments }}
+            &dotnet test "$($_.FullName)" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.TestCoverageArguments}} ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestArguments }}
           }
 
     - task: PublishTestResults@2
