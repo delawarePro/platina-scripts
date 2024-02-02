@@ -36,6 +36,9 @@ parameters:
   default: []
   displayName: 'Optional steps to execute after production slot deploy, before cleaning up the old slot (when applicable).'
 
+variables:
+    webAppSlotName: $[ parameters.webAppSlot ]
+
 steps:
 - task: PowerShell@2
   displayName: '${{ coalesce(parameters.label, parameters.module) }} - Check preconditions'
@@ -89,7 +92,7 @@ steps:
       WebAppName: ${{ parameters.webApp }}
       ResourceGroupName: ${{ parameters.webAppResourceGroup }}
       SourceSlot: ${{ parameters.webAppSlot }}
-    condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne($[ parameters.webAppSlot ], 'production'))
+    condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['webAppSlotName'], 'production'))
 
   - ${{ each step in parameters.postDeploySteps }}:
     - ${{ step }} 
@@ -102,4 +105,4 @@ steps:
       WebAppName: ${{ parameters.webApp }}
       ResourceGroupName: ${{ parameters.webAppResourceGroup}}
       Slot: ${{ parameters.webAppSlot }}
-    condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne($[ parameters.webAppSlot ], 'production'))
+    condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['webAppSlotName'], 'production'))
