@@ -56,6 +56,7 @@ steps:
           Write-Host 'Web app name: ''${{ parameters.webApp }}'''
           Write-Host "##vso[task.setVariable variable=skipWebApp]false"
       }
+      # Copy webAppSlot parameter to webAppSlotName variable so we can use it in conditions.
       Write-Host "##vso[task.setVariable variable=webAppSlotName]${{ parameters.webAppSlot }}"
 
 - task: AzureRmWebAppDeployment@4
