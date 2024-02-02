@@ -36,9 +36,6 @@ parameters:
   default: []
   displayName: 'Optional steps to execute after production slot deploy, before cleaning up the old slot (when applicable).'
 
-variables:
-    webAppSlotName: $[ parameters.webAppSlot ]
-
 steps:
 - task: PowerShell@2
   displayName: '${{ coalesce(parameters.label, parameters.module) }} - Check preconditions'
@@ -59,6 +56,7 @@ steps:
           Write-Host 'Web app name: ''${{ parameters.webApp }}'''
           Write-Host "##vso[task.setVariable variable=skipWebApp]false"
       }
+      Write-Host "##vso[task.setVariable variable=webAppSlotName]${{ parameters.webAppSlot }}"
 
 - task: AzureRmWebAppDeployment@4
   displayName: '${{ coalesce(parameters.label, parameters.module) }} - Deploy'
