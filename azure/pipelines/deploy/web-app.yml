@@ -3,10 +3,6 @@ parameters:
 - name: azureSubscription
   type: string
   displayName: 'Azure Subscription to deploy to.'
-- name: variablePrefix
-  type: string
-  displayName: 'Prefix used in output variables from Platina provision CLI.'
-  default: 'Platina'
 - name: module
   type: string
   displayName: 'Platina module name.'
@@ -60,6 +56,8 @@ steps:
           Write-Host 'Web app name: ''${{ parameters.webApp }}'''
           Write-Host "##vso[task.setVariable variable=skipWebApp]false"
       }
+      # Copy webAppSlot parameter to webAppSlotName variable so we can use it in conditions.
+      Write-Host "##vso[task.setVariable variable=webAppSlotName]${{ parameters.webAppSlot }}"
 
 - task: AzureRmWebAppDeployment@4
   displayName: '${{ coalesce(parameters.label, parameters.module) }} - Deploy'
@@ -93,7 +91,7 @@ steps:
       WebAppName: ${{ parameters.webApp }}
       ResourceGroupName: ${{ parameters.webAppResourceGroup }}
       SourceSlot: ${{ parameters.webAppSlot }}
-    condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['${{ parameters.variablePrefix }}${{ parameters.module }}WebAppSlot'], 'production'))
+    condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['webAppSlotName'], 'production'))
 
   - ${{ each step in parameters.postDeploySteps }}:
     - ${{ step }} 
@@ -106,4 +104,4 @@ steps:
       WebAppName: ${{ parameters.webApp }}
       ResourceGroupName: ${{ parameters.webAppResourceGroup}}
       Slot: ${{ parameters.webAppSlot }}
-    condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['${{ parameters.variablePrefix }}${{ parameters.module }}WebAppSlot'], 'production'))
+    condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['webAppSlotName'], 'production'))
