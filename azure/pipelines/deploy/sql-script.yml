@@ -92,8 +92,10 @@ steps:
   inputs:
     targetType: inline
     script: |
-      # Invoke-Sqlcmd is typically available on hosted build agent.
-      # Install-Module -Name SqlServer -AllowPrerelease -Force -Verbose -Scope CurrentUser
+      # Invoke-Sqlcmd is typically available on Windows hosted build agent, but not on Linux.
+      If (-Not (Get-Module SqlServer -ListAvailable)) {
+        Install-Module -Name SqlServer -AllowPrerelease -Force -Verbose -Scope CurrentUser        
+      }     
       
       $scriptPath = Split-Path -Path "${{ parameters.script }}"
       Set-Location $scriptPath
