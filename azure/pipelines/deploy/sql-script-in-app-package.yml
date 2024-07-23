@@ -15,9 +15,6 @@ parameters:
 - name: package
   type: string
   displayName: 'Path to zip package of the app. The deployment will be skipped if this file doesn''t exist.'
-- name: serverResourceGroup
-  type: string
-  displayName: 'SQL server resource group name.'
 - name: server
   type: string
   displayName: 'Fully qualified domain name of the SQL server.'
@@ -72,7 +69,6 @@ steps:
     variablePrefix: ${{ parameters.variablePrefix }}
     module: ${{ parameters.module }}
     script: $(Pipeline.Workspace)/${{ parameters.module }}/package/resources/deploy.sql
-    serverResourceGroup: ${{ parameters.serverResourceGroup }}
     server: ${{ parameters.server }}
     adminLogin: ${{ parameters.adminLogin }}
     adminPassword: ${{ parameters.adminPassword }}
