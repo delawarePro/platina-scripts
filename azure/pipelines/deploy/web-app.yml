@@ -62,8 +62,8 @@ steps:
       }
       # Copy webAppSlot parameter to webAppSlotName variable so we can use it in conditions.
       Write-Host "##vso[task.setVariable variable=webAppSlotName]${{ parameters.webAppSlot }}"     
-      # Copy keepStagingSlot parameter to keepStagingSlotVar variable so we can use it in conditions.
-      Write-Host "##vso[task.setVariable variable=keepStagingSlotVar]${{ parameters.keepStagingSlot }}""
+      # Copy keepStagingSlot parameter to keepStagingSlot variable so we can use it in conditions.
+      Write-Host "##vso[task.setVariable variable=keepStagingSlot]${{ parameters.keepStagingSlot }}"
 
 - task: AzureRmWebAppDeployment@4
   displayName: '${{ coalesce(parameters.label, parameters.module) }} - Deploy'
@@ -110,7 +110,7 @@ steps:
       WebAppName: ${{ parameters.webApp }}
       ResourceGroupName: ${{ parameters.webAppResourceGroup}}
       Slot: ${{ parameters.webAppSlot }}
-    condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['webAppSlotName'], 'production'), not(variables['keepStagingSlotVar']))
+    condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['webAppSlotName'], 'production'), not(variables['keepStagingSlot']))
   
   - task: AzureAppServiceManage@0
     displayName: '${{ coalesce(parameters.label, parameters.module) }} - Stop slot'
@@ -121,4 +121,4 @@ steps:
       ResourceGroupName: ${{ parameters.webAppResourceGroup}}
       SpecifySlotOrASE: true
       Slot: ${{ parameters.webAppSlot }}
-    condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['webAppSlotName'], 'production'), variables['keepStagingSlotVar'])
+    condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['webAppSlotName'], 'production'), variables['keepStagingSlot'])
