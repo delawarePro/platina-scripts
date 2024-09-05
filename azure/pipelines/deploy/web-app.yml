@@ -64,7 +64,7 @@ steps:
       Write-Host "##vso[task.setVariable variable=webAppSlotName]${{ parameters.webAppSlot }}"
       
       # Copy keepStagingSlot parameter to keepStagingSlot variable so we can use it in conditions.
-      Write-Host "##vso[task.setVariable variable=keepStagingSlot]${{ parameters.keepStagingSlot }}
+      Write-Host "##vso[task.setVariable variable=keepStagingSlot]${{ parameters.keepStagingSlot }}""
 
 - task: AzureRmWebAppDeployment@4
   displayName: '${{ coalesce(parameters.label, parameters.module) }} - Deploy'
