@@ -35,6 +35,10 @@ parameters:
   type: stepList
   default: []
   displayName: 'Optional steps to execute after production slot deploy, before cleaning up the old slot (when applicable).'
+- name: keepStagingSlot
+  type: boolean
+  default: false
+  displayName: 'When set to true, just stops the staging slot instead of deleting it (only works when webAppSlot != production)'
 
 steps:
 - task: PowerShell@2
@@ -58,6 +62,9 @@ steps:
       }
       # Copy webAppSlot parameter to webAppSlotName variable so we can use it in conditions.
       Write-Host "##vso[task.setVariable variable=webAppSlotName]${{ parameters.webAppSlot }}"
+      
+      # Copy keepStagingSlot parameter to keepStagingSlot variable so we can use it in conditions.
+      Write-Host "##vso[task.setVariable variable=keepStagingSlot]${{ parameters.keepStagingSlot }}
 
 - task: AzureRmWebAppDeployment@4
   displayName: '${{ coalesce(parameters.label, parameters.module) }} - Deploy'
@@ -104,4 +111,15 @@ steps:
       WebAppName: ${{ parameters.webApp }}
       ResourceGroupName: ${{ parameters.webAppResourceGroup}}
       Slot: ${{ parameters.webAppSlot }}
-    condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['webAppSlotName'], 'production'))
+    condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['webAppSlotName'], 'production'), not(variables['keepStagingSlot']))
+  
+  - task: AzureAppServiceManage@0
+    displayName: '${{ coalesce(parameters.label, parameters.module) }} - Stop slot'
+    inputs:
+      azureSubscription: ${{ parameters.azureSubscription }}
+      Action: 'Stop Azure App Service'
+      WebAppName: ${{ parameters.webApp }}
+      ResourceGroupName: ${{ parameters.webAppResourceGroup}}
+      SpecifySlotOrASE: true
+      Slot: ${{ parameters.webAppSlot }}
+    condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['webAppSlotName'], 'production'), variables['keepStagingSlot'])
