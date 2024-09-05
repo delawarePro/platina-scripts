@@ -61,8 +61,7 @@ steps:
           Write-Host "##vso[task.setVariable variable=skipWebApp]false"
       }
       # Copy webAppSlot parameter to webAppSlotName variable so we can use it in conditions.
-      Write-Host "##vso[task.setVariable variable=webAppSlotName]${{ parameters.webAppSlot }}"
-      
+      Write-Host "##vso[task.setVariable variable=webAppSlotName]${{ parameters.webAppSlot }}"     
       # Copy keepStagingSlot parameter to keepStagingSlot variable so we can use it in conditions.
       Write-Host "##vso[task.setVariable variable=keepStagingSlot]${{ parameters.keepStagingSlot }}""
 
