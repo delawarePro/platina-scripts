@@ -35,6 +35,10 @@ parameters:
   type: stepList
   default: []
   displayName: 'Optional steps to execute after production slot deploy, before cleaning up the old slot (when applicable).'
+- name: keepStagingSlot
+  type: boolean
+  default: false
+  displayName: 'When set to true, just stops the staging slot instead of deleting it (only works when webAppSlot != production)'
 
 steps:
 - task: PowerShell@2
@@ -96,12 +100,27 @@ steps:
   - ${{ each step in parameters.postDeploySteps }}:
     - ${{ step }} 
 
-  - task: AzureAppServiceManage@0
-    displayName: '${{ coalesce(parameters.label, parameters.module) }} - Remove slot'
-    inputs:
-      azureSubscription: ${{ parameters.azureSubscription }}
-      Action: 'Delete Slot'
-      WebAppName: ${{ parameters.webApp }}
-      ResourceGroupName: ${{ parameters.webAppResourceGroup}}
-      Slot: ${{ parameters.webAppSlot }}
-    condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['webAppSlotName'], 'production'))
+  - ${{ if not(parameters.keepStagingSlot) }}:
+
+    - task: AzureAppServiceManage@0
+      displayName: '${{ coalesce(parameters.label, parameters.module) }} - Remove slot'
+      inputs:
+        azureSubscription: ${{ parameters.azureSubscription }}
+        Action: 'Delete Slot'
+        WebAppName: ${{ parameters.webApp }}
+        ResourceGroupName: ${{ parameters.webAppResourceGroup}}
+        Slot: ${{ parameters.webAppSlot }}
+      condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['webAppSlotName'], 'production'))
+  
+  - ${{ if parameters.keepStagingSlot}}:
+
+    - task: AzureAppServiceManage@0
+      displayName: '${{ coalesce(parameters.label, parameters.module) }} - Stop slot'
+      inputs:
+        azureSubscription: ${{ parameters.azureSubscription }}
+        Action: 'Stop Azure App Service'
+        WebAppName: ${{ parameters.webApp }}
+        ResourceGroupName: ${{ parameters.webAppResourceGroup}}
+        SpecifySlotOrASE: true
+        Slot: ${{ parameters.webAppSlot }}
+      condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['webAppSlotName'], 'production'))
