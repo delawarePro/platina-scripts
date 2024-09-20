@@ -100,7 +100,7 @@ steps:
   - ${{ each step in parameters.postDeploySteps }}:
     - ${{ step }} 
 
-  - ${{ if not(parameters.keepStagingSlot }}:
+  - ${{ if not(parameters.keepStagingSlot) }}:
 
     - task: AzureAppServiceManage@0
       displayName: '${{ coalesce(parameters.label, parameters.module) }} - Remove slot'
