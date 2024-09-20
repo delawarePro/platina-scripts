@@ -62,8 +62,6 @@ steps:
       }
       # Copy webAppSlot parameter to webAppSlotName variable so we can use it in conditions.
       Write-Host "##vso[task.setVariable variable=webAppSlotName]${{ parameters.webAppSlot }}"     
-      # Copy keepStagingSlot parameter to keepStagingSlot variable so we can use it in conditions.
-      Write-Host "##vso[task.setVariable variable=keepStagingSlot]${{ parameters.keepStagingSlot }}"
 
 - task: AzureRmWebAppDeployment@4
   displayName: '${{ coalesce(parameters.label, parameters.module) }} - Deploy'
@@ -102,7 +100,7 @@ steps:
   - ${{ each step in parameters.postDeploySteps }}:
     - ${{ step }} 
 
-  - ${{ if not(variables['keepStagingSlot']) }}
+  - ${{ if not(parameters.keepStagingSlot }}
 
     - task: AzureAppServiceManage@0
       displayName: '${{ coalesce(parameters.label, parameters.module) }} - Remove slot'
@@ -114,8 +112,8 @@ steps:
         Slot: ${{ parameters.webAppSlot }}
       condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['webAppSlotName'], 'production'))
   
-  - ${{ if variables['keepStagingSlot'] }}
-  
+  - ${{ if parameters.keepStagingSlot }}
+
     - task: AzureAppServiceManage@0
       displayName: '${{ coalesce(parameters.label, parameters.module) }} - Stop slot'
       inputs:
