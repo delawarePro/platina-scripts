@@ -103,6 +103,7 @@ steps:
     - ${{ step }} 
 
   - ${{ if not(variables['keepStagingSlot']) }}
+
     - task: AzureAppServiceManage@0
       displayName: '${{ coalesce(parameters.label, parameters.module) }} - Remove slot'
       inputs:
@@ -114,6 +115,7 @@ steps:
       condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['webAppSlotName'], 'production'))
   
   - ${{ if variables['keepStagingSlot'] }}
+  
     - task: AzureAppServiceManage@0
       displayName: '${{ coalesce(parameters.label, parameters.module) }} - Stop slot'
       inputs:
