@@ -102,23 +102,25 @@ steps:
   - ${{ each step in parameters.postDeploySteps }}:
     - ${{ step }} 
 
-  - task: AzureAppServiceManage@0
-    displayName: '${{ coalesce(parameters.label, parameters.module) }} - Remove slot'
-    inputs:
-      azureSubscription: ${{ parameters.azureSubscription }}
-      Action: 'Delete Slot'
-      WebAppName: ${{ parameters.webApp }}
-      ResourceGroupName: ${{ parameters.webAppResourceGroup}}
-      Slot: ${{ parameters.webAppSlot }}
-    condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['webAppSlotName'], 'production'), not(variables['keepStagingSlot']))
+  - ${{ if not(variables['keepStagingSlot']) }}
+    - task: AzureAppServiceManage@0
+      displayName: '${{ coalesce(parameters.label, parameters.module) }} - Remove slot'
+      inputs:
+        azureSubscription: ${{ parameters.azureSubscription }}
+        Action: 'Delete Slot'
+        WebAppName: ${{ parameters.webApp }}
+        ResourceGroupName: ${{ parameters.webAppResourceGroup}}
+        Slot: ${{ parameters.webAppSlot }}
+      condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['webAppSlotName'], 'production'))
   
-  - task: AzureAppServiceManage@0
-    displayName: '${{ coalesce(parameters.label, parameters.module) }} - Stop slot'
-    inputs:
-      azureSubscription: ${{ parameters.azureSubscription }}
-      Action: 'Stop Azure App Service'
-      WebAppName: ${{ parameters.webApp }}
-      ResourceGroupName: ${{ parameters.webAppResourceGroup}}
-      SpecifySlotOrASE: true
-      Slot: ${{ parameters.webAppSlot }}
-    condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['webAppSlotName'], 'production'), variables['keepStagingSlot'])
+  - ${{ if variables['keepStagingSlot'] }}
+    - task: AzureAppServiceManage@0
+      displayName: '${{ coalesce(parameters.label, parameters.module) }} - Stop slot'
+      inputs:
+        azureSubscription: ${{ parameters.azureSubscription }}
+        Action: 'Stop Azure App Service'
+        WebAppName: ${{ parameters.webApp }}
+        ResourceGroupName: ${{ parameters.webAppResourceGroup}}
+        SpecifySlotOrASE: true
+        Slot: ${{ parameters.webAppSlot }}
+      condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['webAppSlotName'], 'production'))
