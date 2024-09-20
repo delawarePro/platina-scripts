@@ -100,19 +100,27 @@ steps:
   - ${{ each step in parameters.postDeploySteps }}:
     - ${{ step }} 
 
-  - task: AzureAppServiceManage@0
-    ${{ if parameters.keepStagingSlot }}
-      displayName: '${{ coalesce(parameters.label, parameters.module) }} - Stop slot'
-    ${{ else }}
+  - ${{ if not(parameters.keepStagingSlot }}:
+
+    - task: AzureAppServiceManage@0
       displayName: '${{ coalesce(parameters.label, parameters.module) }} - Remove slot'
-    inputs:
-      azureSubscription: ${{ parameters.azureSubscription }}
-      ${{ if parameters.keepStagingSlot }}
-        Action: 'Stop Azure App Service'
-        SpecifySlotOrASE: true
-      ${{ else }}
+      inputs:
+        azureSubscription: ${{ parameters.azureSubscription }}
         Action: 'Delete Slot'
-      WebAppName: ${{ parameters.webApp }}
-      ResourceGroupName: ${{ parameters.webAppResourceGroup}}
-      Slot: ${{ parameters.webAppSlot }}
-    condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['webAppSlotName'], 'production'))
+        WebAppName: ${{ parameters.webApp }}
+        ResourceGroupName: ${{ parameters.webAppResourceGroup}}
+        Slot: ${{ parameters.webAppSlot }}
+      condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['webAppSlotName'], 'production'))
+  
+  - ${{ if parameters.keepStagingSlot}}:
+
+    - task: AzureAppServiceManage@0
+      displayName: '${{ coalesce(parameters.label, parameters.module) }} - Stop slot'
+      inputs:
+        azureSubscription: ${{ parameters.azureSubscription }}
+        Action: 'Stop Azure App Service'
+        WebAppName: ${{ parameters.webApp }}
+        ResourceGroupName: ${{ parameters.webAppResourceGroup}}
+        SpecifySlotOrASE: true
+        Slot: ${{ parameters.webAppSlot }}
+      condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['webAppSlotName'], 'production'))
