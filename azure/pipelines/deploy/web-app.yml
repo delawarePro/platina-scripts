@@ -79,6 +79,19 @@ steps:
     TakeAppOfflineFlag: false
   condition: and(succeeded(), ne(variables['skipWebApp'], 'true'))
 
+- ${{ if parameters.keepStagingSlot}}:
+
+  - task: AzureAppServiceManage@0
+    displayName: '${{ coalesce(parameters.label, parameters.module) }} - Start slot'
+    inputs:
+      azureSubscription: ${{ parameters.azureSubscription }}
+      Action: 'Start Azure App Service'
+      WebAppName: ${{ parameters.webApp }}
+      ResourceGroupName: ${{ parameters.webAppResourceGroup}}
+      SpecifySlotOrASE: true
+      Slot: ${{ parameters.webAppSlot }}
+    condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['webAppSlotName'], 'production'))
+
 - ${{ if and(parameters.webAppSlot, eq(parameters.webAppSlot, 'production')) }}:
   - ${{ each step in parameters.postDeploySteps }}:
     - ${{ step }} 
