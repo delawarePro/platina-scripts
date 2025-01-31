@@ -5,7 +5,7 @@ parameters:
   - name: voltaVersion
     displayName: Volta Version
     type: string
-    default: '1.1.0'
+    default: '2.0.2'
 
 steps:
   - bash: |
