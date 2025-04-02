@@ -1,0 +1,34 @@
+name: Docker Push Containers
+
+inputs:
+  ContainerRegistryUrl:
+    description: 'Url of the Azure Container Registry, f.e. EXAMPLE.azurecr.io'
+    required: true
+    default: ''
+
+  PackagesPath:
+    description: 'Path where packages were published to.'
+    required: false
+    default: '${{ runner.temp }}/packages'
+    
+runs:
+  using: "composite"
+  steps:
+    - name: DotNet Build
+      shell: bash
+      run: |
+        REGISTRY="${{ inputs.ContainerRegistryUrl }}"
+        echo "Using registry $REGISTRY"
+
+        find ${{ inputs.PackageOutputPath }} -name "container.json" | while read file; do
+          CONTAINER_REPO=$(jq -r '.repository' "$file")
+          CONTAINER_VERSION=$(jq -r '.version' "$file")
+          TAG="$REGISTRY/$CONTAINER_REPO:$CONTAINER_VERSION"
+
+          echo "Pushing $TAG"
+          docker tag "$CONTAINER_REPO:$CONTAINER_VERSION" "$TAG"
+          docker push "$TAG"
+
+          # Add registry field to container.json
+          jq --arg registry "$REGISTRY" '. + {registry: $registry}' "$file" > tmp.json && mv tmp.json "$file"
+        done

@@ -1,0 +1,13 @@
+{
+    "name": "Platina CD Pipeline",
+    "description": "Platina CD Pipeline with assumptions on environment. Create your own re-usable workflow (provision-and-deploy) to call from each environment.",
+    "iconName": "octicon rocket",
+    "categories": [
+        "AspNetCore",
+        "DotNetConsole",
+        "DotNetCoreWorker"
+    ],
+    "filePatterns": [
+        "*.sln"
+    ]
+}

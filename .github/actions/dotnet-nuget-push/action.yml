@@ -1,0 +1,32 @@
+name: DotNet NuGet Push
+
+inputs:
+  NuGetPublishFeedUrl:
+    description: 'Url of the NuGet feed where package(s) should be pushed to.'
+    required: true
+    type: 'string'
+
+  NuGetPublishFeedApiKey:
+    description: 'ApiKey of the NuGet feed where package(s) should be pushed to.'
+    required: true
+    type: 'string'
+
+  NuGetPackagePath:
+    description: 'Path on disk where the .nupkg / .snupkg packages are located.'
+    required: false
+    default: '${{ github.workspace }}'
+
+runs:
+  using: "composite"
+  steps:
+    - name: DotNet Nuget Push
+      shell: bash
+      run: |
+        PACK_PATH="${{ inputs.NuGetPackagePath }}"
+        NUGET_PACKAGES=$(find ${PACK_PATH} \( -name "*.nupkg" -o -name "*.snupkg" \) -not -name "$*.symbols.nupkg")
+
+        for nugetPackage in $NUGET_PACKAGES; do
+          echo "Pushing package: $nugetPackage"
+          dotnet nuget push "$nugetPackage" --source "${{ inputs.NuGetPublishFeedUrl }}" --api-key "${{ inputs.NuGetPublishFeedApiKey }}"
+        done
+

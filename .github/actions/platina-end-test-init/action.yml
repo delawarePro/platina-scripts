@@ -1,0 +1,19 @@
+name: Platina End Test Initialization
+
+inputs:
+  Solution:
+    description: 'Solution to process, use this if you have multiple solutions.'
+    required: true
+    default: '*.sln'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Platina Begin Test Initialization
+      shell: bash
+      run: |
+        # Find the solution files and execute the msbuild command
+        for solution in $(find . -name "${{ inputs.Solution }}"); do
+          # Ignore msbuild errors because targets might not be present in projects ( done using '|| true')
+          dotnet msbuild /target:EndPlatinaTestInit  "$solution" || true
+        done

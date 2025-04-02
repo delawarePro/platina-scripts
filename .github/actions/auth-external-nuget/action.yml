@@ -1,0 +1,48 @@
+name: Authenticate to external NuGet feeds
+
+inputs:
+  ExternalFeeds:
+    description: "List of external NuGet feeds concatenated with '|', each feed should be in formatted as: packageSourceKey:PAT_TOKEN."
+    required: true
+    default: ""
+
+  NuGetConfigPath:
+    description: 'Typically located at solution level, override for custom location.'
+    required: false
+    default: 'nuget.config'
+
+runs:
+  using: "composite"
+  steps:
+
+    - name: Configure NuGet External Feeds
+      shell: bash
+      run: |
+        # Split the input data on pipe (|) character.
+        IFS='|' read -ra EXTNERNAL_FEEDS_ARRAY <<< "${{ inputs.ExternalFeeds }}"
+
+        # Loop through the array and process each element
+        for externalFeed in "${EXTNERNAL_FEEDS_ARRAY[@]}"; do
+
+          if [[ -z "$externalFeed" ]]; then
+            echo "Skipping empty line"
+            continue
+          fi
+
+          # Set IFS to colon (:) and read the string into two variables
+          IFS=':' read -r PACKAGE_SOURCE_KEY PACKAGE_SOURCE_TOKEN <<< "$externalFeed"
+
+          # Check if variables are empty before running dotnet command
+          if [[ -z "$PACKAGE_SOURCE_KEY" || -z "$PACKAGE_SOURCE_TOKEN" ]]; then
+            echo "Error: Invalid feed entry '$externalFeed'"
+            exit 1
+          fi
+
+          # Remark: the username does not actually matter when authenticating with a PAT token.
+          dotnet nuget update source $PACKAGE_SOURCE_KEY \
+            --username platina \
+            --password $PACKAGE_SOURCE_TOKEN \
+            --store-password-in-clear-text \
+            --configfile ${{ inputs.NuGetConfigPath }}
+
+        done

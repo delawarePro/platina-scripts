@@ -1,0 +1,71 @@
+name: CD Pipeline
+
+on:
+  workflow_run:
+    workflows: ["CI Pipeline"] 
+    types:
+      - completed
+    # There is currently no 'tags' filter option for workflow_run, any branch filter is also applied to tag names.
+    branches: ["main", "v*"]
+
+jobs:
+  dev:
+    name: Development
+    # Remark: ref requirements should be checked here and not in the GitHub Enivornment.
+    # As this workflow is triggered by 'workflow_run' it always runs in the context of the main branch.
+    if: ${{ (github.event.workflow_run.head_branch == 'main' || startsWith(github.event.workflow_run.head_branch, 'feature/')) && ( github.event.workflow_run.conclusion == 'success' || github.event.inputs.CIRunId != '' ) }}
+
+    concurrency:
+      group: Development
+      cancel-in-progress: false
+
+    # Remark: expected convention, create your own provision and deploy workflow.
+    uses: ./.github/workflows/provision-and-deploy.yml
+    with:
+      GitHubEnvironment: Development
+      PlatinaEnvironment: dev
+      CIRunId: ${{ github.event.workflow_run.id }}
+
+    # Re-Usable workflow does not populate secrets from Environment, it does check protection rules.
+    # Seems like a bug but won't be fixed, see: https://github.com/actions/runner/issues/1490
+    # This come with security risks but since we control the re-usable template it is of no concern.
+    secrets: inherit
+
+  qa:
+    name: QA
+    if: ${{ startsWith(github.event.workflow_run.head_branch, 'v') && github.event.workflow_run.conclusion == 'success' }}
+
+    concurrency:
+      group: QA
+      cancel-in-progress: false
+
+    uses: ./.github/workflows/provision-and-deploy.yml
+    with:
+      GitHubEnvironment: QA
+      PlatinaEnvironment: qa
+      CIRunId: ${{ github.event.workflow_run.id }}
+      
+    # Re-Usable workflow does not populate secrets from Environment, it does check protection rules.
+    # Seems like a bug but won't be fixed, see: https://github.com/actions/runner/issues/1490
+    # This come with security risks but since we control the re-usable template it is of no concern.
+    secrets: inherit
+
+  prd:
+    name: Production
+    if: ${{ startsWith(github.event.workflow_run.head_branch, 'v') && github.event.workflow_run.conclusion == 'success' }}
+    needs: qa
+
+    concurrency:
+      group: Production
+      cancel-in-progress: false
+
+    uses: ./.github/workflows/provision-and-deploy.yml
+    with:
+      GitHubEnvironment: Production
+      PlatinaEnvironment: prd
+      CIRunId: ${{ github.event.workflow_run.id }}
+      
+    # A re-Usable workflow does not populate secrets from Environment, it does check protection rules.
+    # Seems like a bug but won't be fixed, see: https://github.com/actions/runner/issues/1490
+    # This comes with security risks but since we control the re-usable template it is of no concern.
+    secrets: inherit
