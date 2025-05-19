@@ -25,7 +25,7 @@ variables:
     # Detected release build for main, master or release branch.
     withRelease: true
     # Don't test to improve build times when releasing, tests should have succeeded during PR.
-    noTests: true
+    noTests: ${{ parameters.noTests }}
   ${{ if and( eq(parameters.Prerelease, 'none'), ne(variables['Build.SourceBranch'], 'refs/heads/main'), ne(variables['Build.SourceBranch'], 'refs/heads/master'), not( startsWith(variables['Build.SourceBranch'], 'refs/heads/releases/') ), not( startsWith(variables['Build.SourceBranch'], 'refs/heads/prereleases/') ) ) }}:
     withRelease: false
     noTests: ${{ parameters.noTests }}
