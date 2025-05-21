@@ -31,6 +31,10 @@ parameters:
   type: stepList
   default: []
   displayName: 'Optional steps to execute after staging slot deploy, before swapping slots (e.g. smoke testing).'
+- name: skipSwapping
+  type: boolean
+  default: false
+  displayName: 'When set to true, don''t swap slots. (this will also skip removing slots)'
 - name: postDeploySteps
   type: stepList
   default: []
@@ -108,7 +112,7 @@ steps:
       WebAppName: ${{ parameters.webApp }}
       ResourceGroupName: ${{ parameters.webAppResourceGroup }}
       SourceSlot: ${{ parameters.webAppSlot }}
-    condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['webAppSlotName'], 'production'))
+    condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['webAppSlotName'], 'production'), parameters.skipSwapping)
 
   - ${{ each step in parameters.postDeploySteps }}:
     - ${{ step }} 
