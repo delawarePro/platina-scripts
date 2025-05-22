@@ -112,7 +112,7 @@ steps:
       WebAppName: ${{ parameters.webApp }}
       ResourceGroupName: ${{ parameters.webAppResourceGroup }}
       SourceSlot: ${{ parameters.webAppSlot }}
-    condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['webAppSlotName'], 'production'), parameters.skipSwapping)
+    condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['webAppSlotName'], 'production'), variables['skipSwapping')
 
   - ${{ each step in parameters.postDeploySteps }}:
     - ${{ step }} 
