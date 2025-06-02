@@ -34,7 +34,7 @@ parameters:
 - name: skipSwapping
   type: boolean
   default: false
-  displayName: 'When set to true, don''t swap slots. (this will also skip removing slots)'
+  displayName: 'When set to true, don''t swap slots. (This will also skip cleanup actions on staging slots)'
 - name: postDeploySteps
   type: stepList
   default: []
@@ -112,7 +112,7 @@ steps:
       WebAppName: ${{ parameters.webApp }}
       ResourceGroupName: ${{ parameters.webAppResourceGroup }}
       SourceSlot: ${{ parameters.webAppSlot }}
-    condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['webAppSlotName'], 'production'), variables['skipSwapping'])
+    condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['webAppSlotName'], 'production'), not(variables['skipSwapping']))
 
   - ${{ each step in parameters.postDeploySteps }}:
     - ${{ step }} 
@@ -129,7 +129,7 @@ steps:
         Slot: ${{ parameters.webAppSlot }}
       condition: and(succeeded(), ne(variables['skipWebApp'], 'true'), ne(variables['webAppSlotName'], 'production'))
   
-  - ${{ if parameters.keepStagingSlot}}:
+  - ${{ if and(parameters.keepStagingSlot, not(parameters.skipSwapping)) }}:
 
     - task: AzureAppServiceManage@0
       displayName: '${{ coalesce(parameters.label, parameters.module) }} - Stop slot'
