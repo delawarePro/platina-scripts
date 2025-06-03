@@ -103,7 +103,7 @@ steps:
   - ${{ each step in parameters.postStagingSteps }}:
     - ${{ step }} 
 
-  - ${{ if not(parameters.skipSwapping)) }}:
+  - ${{ if not(parameters.skipSwapping) }}:
     - task: AzureAppServiceManage@0
       displayName: '${{ coalesce(parameters.label, parameters.module) }} - Swap slots'
       inputs:
