@@ -122,17 +122,20 @@ steps:
       path: $(NUGET_PACKAGES)
     condition: ne(variables.NUGET_PACKAGES, '')
   
-- task: DotNetCoreCLI@2
-  displayName: 'DotNet Restore'
-  inputs: 
-    command: 'restore'
-    projects: ${{ parameters.Solution }}
-    ${{ if parameters.NuGetConfigPath }}:
-      feedsToUse: 'config'
-      nugetConfigPath: ${{ parameters.NuGetConfigPath }}
+- task: NuGetAuthenticate@1
+  displayName: 'Authenticate with NuGet'
+  inputs:
     ${{ if parameters.ExternalFeedCredentials }}:
-      externalFeedCredentials: ${{ parameters.ExternalFeedCredentials }}
-      restoreArguments: --locked-mode
+        nuGetServiceConnections: ${{ parameters.ExternalFeedCredentials }}
+
+- task: PowerShell@2
+  displayName: 'DotNet Restore'
+  inputs:
+    targetType: 'inline'
+    script: |    
+        $command = "dotnet restore ${{ parameters.Solution }}"        
+        if ("${{ parameters.NuGetConfigPath }}" -ne $null) { $command += " --configfile `"${{ parameters.NuGetConfigPath }}`"" }
+        Invoke-Expression $command
 
 - ${{ if and( ne(parameters.NoTests, true), ne(parameters.WithPlatinaTestInit, false) ) }}:
   - task: PowerShell@2
