@@ -1,0 +1,68 @@
+name: SQL Migration - Check Preconditions
+
+inputs:
+  Script:
+    description: 'Path to SQL script to execute. The deployment will be skipped if this file doesn''t exist.'
+    required: true
+
+  Server:
+    description: 'Fully qualified domain name of the SQL server.'
+    required: true
+
+  Database:
+    description: 'SQL database name.'
+    required: true
+
+  AdminUsername:
+    description: 'SQL admin username.'
+    required: true
+
+  AdminPassword:
+    description: 'SQL admin password.'
+    required: true
+
+outputs:
+  SkipSQLScript:
+    description: 'Indicates if the SQL script should be skipped.'
+    value: ${{ steps.sql-migration-precondition.outputs.SkipSQLScript }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: 'Check preconditions'
+      id: sql-migration-precondition
+      shell: bash
+      run: |
+        SKIP_SQL_SCRIPT=false
+
+        if [[ ! -f "${{ inputs.Script }}" ]]; then
+            echo "❌ SQL script doesn't exist."
+            SKIP_SQL_SCRIPT=true
+
+        elif [[ "${{ inputs.Server }}" == "" ]]; then
+            echo "❌ Server not set."
+            SKIP_SQL_SCRIPT=true
+
+        elif [[ "${{ inputs.AdminUsername }}" == "" ]]; then
+            echo "❌ Admin username not set."
+            SKIP_SQL_SCRIPT=true
+
+        elif [[ "${{ inputs.AdminPassword }}" == "" ]]; then
+            echo "❌ Admin password not set."
+            SKIP_SQL_SCRIPT=true
+
+        elif [[ "${{ inputs.Database }}" == "" ]]; then
+            echo "❌ Database not set."
+            SKIP_SQL_SCRIPT=true
+        else
+            scriptPath=$(dirname "${{ inputs.Script }}")
+
+            echo "✔️ Preconditions have been met to continue SQL script deployment."
+            echo "Script:       '${{ inputs.Script }}'"
+            echo "Script path:  '$scriptPath'"
+            echo "Server:       '${{ inputs.Server }}'"
+            echo "Admin login:  '${{ inputs.AdminUsername }}'"
+            echo "Database:     '${{ inputs.Database }}'"
+        fi
+
+        echo "SkipSQLScript=$SKIP_SQL_SCRIPT" >> $GITHUB_OUTPUT

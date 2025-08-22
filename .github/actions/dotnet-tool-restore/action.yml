@@ -1,0 +1,9 @@
+name: DotNet Tool Restore
+
+runs:
+  using: "composite"
+  steps:
+    - name: DotNet Tool Restore
+      shell: bash
+      run: |
+        dotnet tool restore

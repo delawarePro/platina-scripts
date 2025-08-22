@@ -1,0 +1,40 @@
+name: DotNet Restore
+
+inputs:
+  Solution:
+    description: 'Optional, solution to process, use this if you have multiple solutions.'
+    required: false
+    default: '*.sln'
+
+  NuGetPackagesPath:
+    description: 'Path where NuGet packages should be restored to. If caching is used this should point to the same path.'
+    required: True
+
+  NuGetConfigPath:
+    description: 'Typically located at solution level, override for custom location.'
+    required: false
+    default: 'nuget.config'
+
+runs:
+  using: "composite"
+  steps:
+    - name: DotNet Restore
+      shell: bash
+      run: |
+        PROJECTS=$(find . -name "${{ inputs.Solution }}")
+        dotnetArgs=()
+
+        dotnetArgs+=("$PROJECTS")
+
+        if [ $NUGET_CONFIG_PATH != '' ] 
+        then
+          dotnetArgs+=("--configfile ${{ inputs.NuGetConfigPath }}")
+        fi
+
+        dotnetArgs+=("--locked-mode")
+        dotnetArgs+=("--verbosity Normal")
+
+        dotnet restore ${dotnetArgs[@]}
+      env:
+        NUGET_PACKAGES: ${{ inputs.NuGetPackagesPath }}
+        NUGET_CONFIG_PATH: ${{ inputs.NuGetConfigPath }}

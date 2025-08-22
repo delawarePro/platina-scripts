@@ -1,0 +1,32 @@
+name: DotNet Build
+
+inputs:
+  Solution:
+    description: 'Optional, solution to process, use this if you have multiple solutions.'
+    required: false
+    default: '*.sln'
+
+  BuildConfiguration:
+    description: 'Configuration name to build.'
+    required: false
+    default: 'Release'
+
+  BuildPlatform:
+    description: 'Platform name to build.'
+    required: false
+    default: 'Any CPU'
+    
+runs:
+  using: "composite"
+  steps:
+    - name: DotNet Build
+      shell: bash
+      run: |
+        PROJECTS=$(find . -name "${{ inputs.Solution }}")
+        PLATFORM="${{ inputs.BuildPlatform }}"
+
+        dotnet build "$PROJECTS" \
+          --configuration ${{ inputs.BuildConfiguration }} \
+          /p:Platform="$PLATFORM" \
+          --no-restore \
+          --verbosity Normal

@@ -1,0 +1,67 @@
+name: Platina CI - Branch Conventions.
+
+inputs:
+  NoTests:
+    description: 'Skip tests'
+    required: false
+    default: 'false'
+
+  PreRelease:
+    description: 'Pre-release to trigger preparing packages'
+    required: false
+    default: 'none'
+
+  GitHub_Ref:
+    description: 'The fully-formed ref of the branch or tag that triggered the workflow run.'
+    required: true
+
+outputs:
+  WithRelease:
+    description: 'Indicates if there should be a release'
+    value: ${{ steps.branch-convention.outputs.WithRelease }}
+    
+  NoTests:
+    description: 'Skip tests'
+    value: ${{ steps.branch-convention.outputs.NoTests }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Calculate variables based on trigger ref
+      id: branch-convention
+      shell: bash
+      run: |
+        BRANCH_NAME="${{ inputs.GitHub_Ref }}"
+
+        # Default values
+        WITH_RELEASE='false'
+        NO_TESTS="${{ inputs.NoTests }}"
+        PRERELEASE="${{ inputs.PreRelease }}"
+
+        # If a prerelease parameter is set (not 'none'), enable release
+        if [[ "$PRERELEASE" != "" && "$PRERELEASE" != "none" ]]; then
+          WITH_RELEASE='true'
+        # If on a prerelease branch
+        elif [[ "$BRANCH_NAME" == refs/heads/prereleases/* ]]; then
+          WITH_RELEASE='true'
+          NO_TESTS='true'
+          PRERELEASE=$BRANCH_NAME
+        # If on a main/release branch or release tag
+        elif [[ "$BRANCH_NAME" == "refs/heads/main" || "$BRANCH_NAME" == refs/heads/releases/* || "$BRANCH_NAME" == refs/tags/v* ]]; then
+          WITH_RELEASE='true'
+          NO_TESTS='true'
+          PRERELEASE=''
+        fi
+
+        # Update Env variables.
+        echo "WITH_RELEASE=$WITH_RELEASE" >> $GITHUB_ENV
+        echo "NO_TESTS=$NO_TESTS" >> $GITHUB_ENV
+
+        # Remark: these variables are used during NuGet package generation.
+        # See Dlw.Platina.Build > Nugets.props
+        echo "Prerelease=$PRERELEASE" >> $GITHUB_ENV
+        echo "WithRelease=$WITH_RELEASE" >> $GITHUB_ENV
+
+        # Set output variables.
+        echo "WithRelease=$WITH_RELEASE" >> $GITHUB_OUTPUT
+        echo "NoTests=$NO_TESTS" >> $GITHUB_OUTPUT

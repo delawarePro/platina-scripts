@@ -1,0 +1,279 @@
+name: CI Pipeline
+
+on:
+  pull_request:
+    branches:
+      - $default-branch
+
+  push:
+    branches:
+      - $default-branch
+
+    tags:
+      # Match SEMVER tags
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      # Match SEMVER tags with a -NAME f.e. v1.0.3-hotfix
+      - 'v[0-9]+.[0-9]+.[0-9]+-[a-zA-Z]*'
+
+    paths-ignore:
+          - '.github/**'
+          - '.azure/**'
+          - 'README.md'
+
+  workflow_dispatch: # Allows manual triggering from GitHub Actions UI
+    inputs:
+      NoTests:
+        description: 'Skip tests'
+        required: false
+        default: false
+        type: boolean
+
+      PreRelease:
+        description: 'Pre-release to trigger preparing packages'
+        required: false
+        default: 'none'
+        type: string
+
+# Ensure only 1 CI can run for a given branch at the time.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Sets environment variables
+# Used here to store and show some configuration values.
+# A lot of the steps done in this workflow are re-usable composite actions,
+# for an up-to-date default and explanation of these settings see the config of those actions.
+env:
+  SOLUTION: '*.sln'
+  BUILD_CONFIGURATION: 'Release'
+  BUILD_PLATFORM: 'Any CPU'
+  POST_BUILD_DOTNET_ARGS: '--no-restore --no-build'
+  TEST_PROJECTS_GLOB: '**/*[Tt]ests/*.csproj'
+  TEST_ARGUMENTS: ''
+  TEST_COVERAGE_ARGUMENTS: '--collect "Code Coverage"'
+  NO_TESTS: 'false'
+  RUN_TESTS_IN_AZURE_CONTEXT: 'false'
+  WITH_PLATINA_TEST_INIT: 'false'
+  WITH_PACK: 'false'
+  WITH_PUBLISH: 'false'
+  WITH_RELEASE: 'false'
+  NUGET_CONFIG_PATH: 'nuget.config'
+  WITH_NUGET_CACHE: 'false'
+  EXTERNAL_FEEDS: ''
+  NUGET_PUBLISH_FEED_URL: ''
+  NUGET_PUBLISH_FEED_API_KEY: ''
+  NUGET_SYMBOLS_AZURE_DEV_OPS_ACCOUNT_NAME: ''
+  NUGET_SYMBOLS_AZURE_DEV_OPS_PAT: ''
+  CONTAINER_REGISTRY_URL: ''
+  CONTAINER_REGISTRY_CLIENT_ID: ''
+  CONTAINER_REGISTRY_CLIENT_SECRET: ''
+
+jobs:
+  ci:
+    name: "🚀 CI Pipeline"
+
+    runs-on: [ubuntu-lastest]
+
+    env:
+      PACK_PATH: ${{ github.workspace }}/nugets
+      PUBLISH_PATH: ${{ github.workspace }}/packages
+      TEST_RESULTS_PATH: ${{ github.workspace }}/TestResults
+
+    ### Configure any services that might be required for building, testing, ... 
+    ### See example below with MySQL and Azurite.
+
+    # services:
+    #   mssql:
+    #     image: mcr.microsoft.com/mssql/server:2022-latest
+    #     ports:
+    #       - 1433:1433
+    #     env:
+    #       ACCEPT_EULA: Y
+    #       MSSQL_SA_PASSWORD: ABCDefgh1234#!$%
+    #       MSSQL_PID: Developer
+
+    #   azurite:
+    #     image: mcr.microsoft.com/azure-storage/azurite
+    #     ports:
+    #       - 10000:10000
+    #       - 10001:10001
+    #       - 10002:10002
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Platina CI - Branch Conventions
+        id: platina-ci-branch-conventions
+        uses: delawarePro/platina-scripts/.github/actions/platina-ci-branch-conventions@v1.0.0
+        with:
+          NoTests: ${{ inputs.NoTests || env.NO_TESTS || 'false' }}
+          PreRelease: ${{ inputs.PreRelease || 'none' }}
+          GitHub_Ref: ${{ github.ref }}
+
+      - name: Setup NuGet Cache
+        id: nuget-cache
+        uses: delawarePro/platina-scripts/.github/actions/nuget-cache@v1.0.0
+        with:
+          WithNuGetCache: ${{ env.WITH_NUGET_CACHE  }}
+
+      - name: Configure External NuGet Feeds
+        if: ${{ env.EXTERNAL_FEEDS != '' }}
+        uses: delawarePro/platina-scripts/.github/actions/auth-external-nuget@v1.0.0
+        with:
+          ExternalFeeds: ${{ env.EXTERNAL_FEEDS }}
+          NuGetConfigPath: ${{ env.NUGET_CONFIG_PATH  }}
+          
+      - name: DotNet Restore
+        uses: delawarePro/platina-scripts/.github/actions/dotnet-restore@v1.0.0
+        with:
+          Solution: ${{ env.SOLUTION  }}
+          NuGetPackagesPath: ${{ steps.nuget-cache.outputs.NuGetPackagesPath  }}
+          NuGetConfigPath: ${{ env.NUGET_CONFIG_PATH  }}
+
+      - name: Platina Begin Test Initialization
+        if: ${{ env.NO_TESTS != 'true' && env.WITH_PLATINA_TEST_INIT == 'true' }}
+        uses: delawarePro/platina-scripts/.github/actions/platina-start-test-init@v1.0.0
+        with:
+          Solution: ${{ env.SOLUTION  }}
+
+      - name: DotNet Tool Restore
+        uses: delawarePro/platina-scripts/.github/actions/dotnet-tool-restore@v1.0.0
+
+      - name: DotNet Build
+        uses: delawarePro/platina-scripts/.github/actions/dotnet-build@v1.0.0
+        with:
+          Solution: ${{ env.SOLUTION  }}
+          BuildConfiguration: ${{ env.BUILD_CONFIGURATION  }}
+          BuildPlatform: ${{ env.BUILD_PLATFORM }}
+
+      # Execute packing and publishing before tests so that tests could optionally use publish output.
+      # Next to that, Platina test init will be given more time as well.
+
+      - name: DotNet Pack
+        if: ${{ env.WITH_PACK == 'true' }}
+        uses: delawarePro/platina-scripts/.github/actions/dotnet-pack@v1.0.0
+        with:
+          Solution: ${{ env.SOLUTION  }}
+          BuildConfiguration: ${{ env.BUILD_CONFIGURATION  }}
+          PostBuildDotnetArgs: ${{ env.POST_BUILD_DOTNET_ARGS  }}
+          PackageOutputPath: ${{ env.PACK_PATH  }}
+
+      - name: DotNet Publish
+        if: ${{ env.WITH_PUBLISH == 'true' }}
+        uses: delawarePro/platina-scripts/.github/actions/dotnet-publish@v1.0.0
+        with:
+          Solution: ${{ env.SOLUTION  }}
+          BuildConfiguration: ${{ env.BUILD_CONFIGURATION  }}
+          PostBuildDotnetArgs: ${{ env.POST_BUILD_DOTNET_ARGS  }}
+          PackageOutputPath: ${{ env.PUBLISH_PATH  }}
+
+      ###############################################
+      ###   START: Custom BEFORE test steps here  ###
+      ###############################################
+
+      ###############################################
+      ###   END: Custom BEFORE test steps here    ###
+      ###############################################
+
+      - name: Platina End Test Initialization
+        if: ${{ env.NO_TESTS != 'true' && env.WITH_PLATINA_TEST_INIT == 'true' }}
+        uses: delawarePro/platina-scripts/.github/actions/platina-end-test-init@v1.0.0
+        with:
+          Solution: ${{ env.SOLUTION  }}
+
+      - name: DotNet Test
+        if: ${{ env.NO_TESTS != 'true' && env.RUN_TESTS_IN_AZURE_CONTEXT != 'true' }}
+        uses: delawarePro/platina-scripts/.github/actions/dotnet-test@v1.0.0
+        with:
+          TestProjectsGlob: ${{ env.TEST_PROJECTS_GLOB  }}
+          BuildConfiguration: ${{ env.BUILD_CONFIGURATION  }}
+          PostBuildDotnetArgs: ${{ env.POST_BUILD_DOTNET_ARGS  }}
+          TestCoverageArguments: ${{ env.TEST_COVERAGE_ARGUMENTS  }}
+          TestArguments: ${{ env.TEST_ARGUMENTS  }}
+          TestOutputPath: ${{ env.TEST_RESULTS_PATH }}
+
+      ### Azure Dev Ops Pipeline CI script supports running tests in Azure Context
+      ### This is currently not implemented aside from the RUN_TESTS_IN_AZURE_CONTEXT variable.
+
+      - name: Report test results
+        if: ${{ env.NO_TESTS != 'true' && (success() || failure()) }}
+        uses: delawarePro/platina-scripts/.github/actions/report-test-results@v1.0.0
+        with:
+          TestOutputPath: ${{ env.TEST_RESULTS_PATH }}
+
+      ###############################################
+      ###   START: Custom AFTER test steps here   ###
+      ###############################################
+
+      ###############################################
+      ###   END: Custom AFTER test steps here     ###
+      ###############################################
+
+      ###################################################
+      ###   START: Custom BEFORE RELEASE steps here   ###
+      ###################################################
+
+      ###################################################
+      ###   END: Custom BEFORE RELEASE steps here     ###
+      ###################################################
+
+      - name: Push NuGets
+        if: ${{ env.WITH_PACK == 'true' && env.WITH_RELEASE == 'true' && env.NUGET_PUBLISH_FEED_URL != '' && env.NUGET_PUBLISH_FEED_API_KEY != '' }}
+        uses: delawarePro/platina-scripts/.github/actions/dotnet-nuget-push@v1.0.0
+        with:
+          NuGetPackagePath: ${{ env.PACK_PATH }}
+          NuGetPublishFeedUrl: ${{ env.NUGET_PUBLISH_FEED_URL }}
+          NuGetPublishFeedApiKey: ${{ env.NUGET_PUBLISH_FEED_API_KEY }}
+
+      # The above task does publish the .snupkgs, but Azure Artifacts, GitHub Packages (and possibly more) don't support snupkg.
+      # Therefore, also publish the .pdb to the SymbolServer of this organization.
+      # Users can get rich debugging experience by adding the VSTS symbol server in Visual Studio.
+      # Another option is to embed pdb files in the NuGet package,
+      # Together with https://learn.microsoft.com/en-us/dotnet/core/project-sdk/msbuild-props#copydebugsymbolfilesfrompackages
+      # users should get a rich debugging experience.
+      - name: Publish symbols to Azure Dev Ops Artifacts
+        if: ${{ env.WITH_PACK == 'true' && env.WITH_RELEASE == 'true' && env.NUGET_SYMBOLS_AZURE_DEV_OPS_ACCOUNT_NAME != '' &&  env.NUGET_SYMBOLS_AZURE_DEV_OPS_PAT != '' }}
+        uses: microsoft/action-publish-symbols@v2.1.6
+        with:
+          accountName: ${{ env.NUGET_SYMBOLS_AZURE_DEV_OPS_ACCOUNT_NAME }}
+          symbolServiceUrl: 'https://artifacts.dev.azure.com'
+          # Remark: the PAT token requires more access than just Azure Artifacts
+          # See: https://github.com/marketplace/actions/publish-symbols
+          personalAccessToken: ${{ env.NUGET_SYMBOLS_AZURE_DEV_OPS_PAT }} 
+
+      # Docker login and docker push all containers.
+      - name: Docker Login
+        if: ${{ env.WITH_PUBLISH == 'true' && env.WITH_RELEASE == 'true' && env.CONTAINER_REGISTRY_URL != '' && env.CONTAINER_REGISTRY_CLIENT_ID != '' && env.CONTAINER_REGISTRY_CLIENT_SECRET != '' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.CONTAINER_REGISTRY_URL }}
+          username: ${{ env.CONTAINER_REGISTRY_CLIENT_ID }}
+          password: ${{ env.CONTAINER_REGISTRY_CLIENT_SECRET }}
+
+      - name: Docker Push Containers
+        if: ${{ env.WITH_PUBLISH == 'true' && env.WITH_RELEASE == 'true' && env.CONTAINER_REGISTRY_URL != '' && env.CONTAINER_REGISTRY_CLIENT_ID != '' && env.CONTAINER_REGISTRY_CLIENT_SECRET != '' }}
+        uses: delawarePro/platina-scripts/.github/actions/docker-push@v1.0.0
+        with:
+          ContainerRegistryUrl: ${{ env.CONTAINER_REGISTRY_URL  }}
+          PackagesPath: ${{ env.PACK_PATH  }}
+
+      # Keep package for 7 days for main (e.g. dev releases)
+      # Keep package for 30 days for other releases (qa, prd)
+      - name: Set retention days based on branch
+        if: ${{ env.WITH_PUBLISH == 'true' && env.WITH_RELEASE == 'true' }}
+        run: |
+          if [[ "${{ github.ref_name }}" == "main" ]]; then
+            echo "RETENTION_DAYS=7" >> $GITHUB_ENV
+          else
+            echo "RETENTION_DAYS=30" >> $GITHUB_ENV
+          fi
+
+      - name: Upload Build Artifacts
+        if: ${{ env.WITH_PUBLISH == 'true' && env.WITH_RELEASE == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: ${{ env.PUBLISH_PATH }}
+          retention-days: ${{ env.RETENTION_DAYS }}
+          if-no-files-found: error

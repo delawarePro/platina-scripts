@@ -1,0 +1,45 @@
+name: SQL Migration - Apply EF Migration
+
+inputs:
+  Script:
+    description: 'Path to SQL script to execute. The deployment will be skipped if this file doesn''t exist.'
+    required: true
+
+  Server:
+    description: 'Fully qualified domain name of the SQL server.'
+    required: true
+
+  Database:
+    description: 'SQL database name.'
+    required: true
+
+  AdminUsername:
+    description: 'SQL admin username.'
+    required: true
+
+  AdminPassword:
+    description: 'SQL admin password.'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: 'Execute SQL script'
+      shell: pwsh
+      run: |
+        # Invoke-Sqlcmd is typically available on Windows hosted build agent, but not on Linux.
+        If (-Not (Get-Module SqlServer -ListAvailable)) {
+          Install-Module -Name SqlServer -AllowPrerelease -Force -Verbose -Scope CurrentUser        
+        }     
+        
+        $scriptPath = Split-Path -Path "${{ inputs.Script }}"
+        Set-Location $scriptPath
+
+        $vars = "scriptPath=${scriptPath}"
+        Invoke-Sqlcmd `
+          -ServerInstance "${{ inputs.Server }}" `
+          -Database "${{ inputs.Database }}" `
+          -Username "${{ inputs.AdminUsername }}" `
+          -Password "${{ inputs.AdminPassword }}" `
+          -InputFile "${{ inputs.Script }}" `
+          -Variable "$vars"

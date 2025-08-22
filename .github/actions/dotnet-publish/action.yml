@@ -1,0 +1,43 @@
+name: DotNet Publish
+
+inputs:
+  Solution:
+    description: 'Optional, solution to process, use this if you have multiple solutions.'
+    required: false
+    default: '*.sln'
+
+  BuildConfiguration:
+    description: 'Configuration name to build.'
+    required: false
+    default: 'Release'
+
+  PostBuildDotnetArgs:
+    description: 'Arguments passed to dotnet commander post build dotnet tasks like test, pack and publish.'
+    required: false
+    default: '--no-restore --no-build'
+
+  PackageOutputPath:
+    description: 'Path where packages will be published to.'
+    required: false
+    default: '${{ runner.temp }}/packages'
+
+runs:
+  using: "composite"
+  steps:
+
+    # Version .NET SDK 7.0.200 does not support output parameter on solution builds.
+    # See https://learn.microsoft.com/en-us/dotnet/core/compatibility/sdk/7.0/solution-level-output-no-longer-valid.
+    # Starting from SDK 7.0.201, this has been degraded to a warning for other dotnet commands.
+    # As we really want to perform solution builds/publishes and as long we have build agents that runs on 7.0.200,
+    # we use the workaround to specify the 'PublishDir' property.
+    - name: DotNet Publish
+      shell: bash
+      run: |
+        PROJECTS=$(find . -name "${{ inputs.Solution }}")
+
+        dotnet publish "${{ env.PROJECTS }}" \
+          --configuration ${{ inputs.BuildConfiguration }} \
+          ${{ inputs.PostBuildDotnetArgs }} \
+          --property PublishDir=${{ inputs.PackageOutputPath }} \
+          --verbosity Normal
+

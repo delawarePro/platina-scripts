@@ -1,0 +1,37 @@
+name: Report Test Results
+
+inputs:
+  TestOutputPath:
+    description: "Path where test results are stored."
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Publish Test Results
+      if: ${{ success() || failure() }}
+      uses: dorny/test-reporter@v1.9.1
+      with:
+        name: Test Results
+        path: ${{ inputs.TestOutputPath }}/**/*.trx
+        reporter: dotnet-trx
+        fail-on-empty: 'false'
+
+    # Remark: there is no Test visualizer on GitHub like on Azure Dev Ops so expose as an artifact that the user can use.
+    # The .trx files can be opened in Visual Studio to get a similar view as in Azure Dev Ops.
+    - name: Upload Test Results
+      if: ${{ failure() }} # As it can be quite a bit of data, only upload results when tests fail.
+      uses: actions/upload-artifact@v4
+      with:
+        name: testresults
+        path: ${{ inputs.TestOutputPath }}
+        retention-days: 14
+
+    # Remark: there is no Code Coverage visualizer on GitHub like on Azure Dev Ops so expose as an artifact that the user could use.
+    - name: Upload Code Coverage Results
+      if: ${{ success() || failure() }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: Code Coverage Report
+        path: ${{ inputs.TestOutputPath }}/**/*.coverage
+        retention-days: 7

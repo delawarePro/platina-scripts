@@ -1,0 +1,57 @@
+name: DotNet Test
+
+inputs:
+  TestProjectsGlob:
+    description: 'Glob to match test projects.'
+    required: false
+    default: '**/*[Tt]ests/*.csproj'
+
+  BuildConfiguration:
+    description: 'Configuration name to build.'
+    required: false
+    default: 'Release'
+
+  PostBuildDotnetArgs:
+    description: 'Arguments passed to dotnet commander post build dotnet tasks like test, pack and publish.'
+    required: false
+    default: '--no-restore --no-build'
+
+  TestCoverageArguments:
+    description: 'Test coverage arguments for collection.'
+    required: false
+    default: '--collect "Code Coverage"'
+
+  TestArguments:
+    description: 'Optional arguments to pass to test runner.'
+    required: false
+    default: ''
+
+  TestOutputPath:
+    description: 'Path where test results should be written to .'
+    required: false
+    default: '${{ runner.temp }}/TestResults'
+
+runs:
+  using: "composite"
+  steps:
+    - name: DotNet Build
+      shell: bash
+      run: |
+        TEST_ERROR='false'
+
+        # Run the test projects 1 at the time.
+        for testProject in $(find . -wholename "${{ inputs.TestProjectsGlob }}"); do
+          dotnet test "$testProject" \
+            --logger "trx;LogFileName=$(basename $testProject).trx" \
+            --results-directory ${{ inputs.TestOutputPath }} \
+            --configuration ${{ inputs.BuildConfiguration }} \
+            ${{ inputs.PostBuildDotnetArgs }} \
+            ${{ inputs.TestCoverageArguments}} \
+            ${{ inputs.TestArguments }} || TEST_ERROR='true'
+        done
+
+        if [[ "$TEST_ERROR" != 'false' ]]; then
+          echo "❌ At least one test run has failed."
+          exit 1
+        fi
+

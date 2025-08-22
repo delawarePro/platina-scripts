@@ -1,0 +1,38 @@
+name: NuGet Caching
+
+inputs:
+  WithNuGetCache:
+    description: 'Whether to cache NuGet packages.'
+    required: false
+    default: 'false'
+
+outputs:
+  NuGetPackagesPath:
+    description: 'Location where NuGet packages should be stored.'
+    value: ${{ steps.set-nuget-package-path.outputs.NuGetPackagesPath }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set NuGet Package Location
+      id: set-nuget-package-path
+      shell: bash
+      run: |
+        echo "NuGetPackagesPath=${{ runner.temp }}/.nuget/packages" >> $GITHUB_OUTPUT
+
+    - name: Set NuGet Cache Key
+      if: ${{ inputs.WithNuGetCache == 'true' }}
+      shell: bash
+      run: |
+        echo "NUGET_CACHE_KEY=$(date +'%Y%m%d')" >> $GITHUB_ENV
+
+    # Cache NuGet packages
+    - name: Cache NuGet packages
+      if: ${{ inputs.WithNuGetCache == 'true' }}
+      uses: actions/cache@v3
+      with:
+        path: ${{ steps.set-nuget-package-path.outputs.NuGetPackagesPath }}
+        key: nuget-${{ runner.os }}-${{ env.NUGET_CACHE_KEY }}
+        restore-keys: |
+          nuget-${{ runner.os }}
+

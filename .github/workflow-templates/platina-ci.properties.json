@@ -1,0 +1,13 @@
+{
+    "name": "Platina CI Pipeline",
+    "description": "Platina CI Pipeline.",
+    "iconName": "octicon rocket",
+    "categories": [
+        "AspNetCore",
+        "DotNetConsole",
+        "DotNetCoreWorker"
+    ],
+    "filePatterns": [
+        "*.sln"
+    ]
+}
