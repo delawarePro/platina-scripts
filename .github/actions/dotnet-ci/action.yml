@@ -68,17 +68,12 @@ inputs:
 runs:
   using: composite
   steps:
-   #- uses: actions/setup-dotnet@v5
-   #  if: ${{ inputs.dotNetSdkVersion == '' }}
-   #  name: Setup DotNet SDK
-   #  with:
-   #    dotnet-version: ${{ inputs.dotNetSdkVersion }}
-
     - uses: actions/setup-dotnet@v5
+      if: ${{ inputs.dotNetSdkVersion != '' || (inputs.nuGetSourceUrl != '' && inputs.nuGetAuthToken != '') }}
       name: Setup DotNet NuGet Feed
       with:
         source-url: ${{ inputs.nuGetSourceUrl }}
-        # dotnet-version: ${{ inputs.dotNetSdkVersion }}
+        dotnet-version: ${{ inputs.dotNetSdkVersion }}
       env:
         NUGET_AUTH_TOKEN: ${{ inputs.nuGetAuthToken }}
 
