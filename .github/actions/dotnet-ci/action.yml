@@ -78,7 +78,7 @@ runs:
       name: Setup DotNet NuGet Feed
       with:
         source-url: ${{ inputs.nuGetSourceUrl }}
-        dotnet-version: ${{ inputs.dotNetSdkVersion }}
+        # dotnet-version: ${{ inputs.dotNetSdkVersion }}
       env:
         NUGET_AUTH_TOKEN: ${{ inputs.nuGetAuthToken }}
 
