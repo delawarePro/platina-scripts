@@ -154,6 +154,7 @@ runs:
         personalAccessToken: ${{ inputs.nuGetSymbolsPAT }}
 
     - name: Add publish output to pipeline artifacts
+      if: ${{ inputs.withPublish == 'true' && inputs.withRelease == 'true' }}
       uses: actions/upload-artifact@v4
       with:
         name: packages
