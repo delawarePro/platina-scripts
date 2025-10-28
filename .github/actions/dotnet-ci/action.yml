@@ -11,10 +11,6 @@ inputs:
     description: "Specific .NET SDK version to use."
     required: false
     default: ""
-  withNuGetCache:
-    description: "Whether to cache NuGet packages."
-    required: false
-    default: ""
 
   buildConfiguration:
     description: "Configuration name to build."
@@ -72,18 +68,17 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: actions/setup-dotnet@v5
-      if: ${{ inputs.nuGetSourceUrl == '' }}
-      name: Setup DotNet SDK
-      with:
-        dotnet-version: ${{ inputs.dotNetSdkVersion }}
+   #- uses: actions/setup-dotnet@v5
+   #  if: ${{ inputs.dotNetSdkVersion == '' }}
+   #  name: Setup DotNet SDK
+   #  with:
+   #    dotnet-version: ${{ inputs.dotNetSdkVersion }}
 
     - uses: actions/setup-dotnet@v5
-      if: ${{ inputs.nuGetSourceUrl != '' &&  inputs.nuGetAuthToken != '' }}
       name: Setup DotNet NuGet Feed
       with:
-        cache: ${{ inputs.withNuGetCache == 'true' }}
         source-url: ${{ inputs.nuGetSourceUrl }}
+        dotnet-version: ${{ inputs.dotNetSdkVersion }}
       env:
         NUGET_AUTH_TOKEN: ${{ inputs.nuGetAuthToken }}
 
