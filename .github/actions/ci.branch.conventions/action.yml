@@ -49,7 +49,7 @@ runs:
     
     - name: Detected release build for main, master or release branch.
       id: branch-release
-      if: ${{ (inputs.prerelease == null || inputs.prerelease == '' || inputs.prerelease == 'none') && (github.ref_name == 'refs/heads/main' || github.ref_name == 'refs/heads/master/' || startsWith(github.ref, 'refs/heads/releases/')) }}
+      if: ${{ (inputs.prerelease == null || inputs.prerelease == '' || inputs.prerelease == 'none') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/releases/')) }}
       shell: pwsh
       run: |
         echo "withRelease=true" >> $GITHUB_OUTPUT
@@ -58,7 +58,7 @@ runs:
 
     - name: No release detected.
       id: no-release
-      if: ${{ inputs.prerelease == 'none' && github.ref_name != 'refs/heads/main' && github.ref_name != 'refs/heads/master' && startsWith(github.ref, 'refs/heads/releases/') != true && startsWith(github.ref, 'refs/heads/prereleases/') != true }}
+      if: ${{ inputs.prerelease == 'none' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/master' && startsWith(github.ref, 'refs/heads/releases/') != true && startsWith(github.ref, 'refs/heads/prereleases/') != true }}
       shell: bash
       run: |
         echo "withRelease=false" >> $GITHUB_OUTPUT
