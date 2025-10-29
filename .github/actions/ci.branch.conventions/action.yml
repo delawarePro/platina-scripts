@@ -33,28 +33,28 @@ runs:
       if: ${{ inputs.prerelease != null && inputs.prerelease != '' && inputs.prerelease != 'none' }}
       shell: pwsh
       run: |
-        echo "withRelease=true" >> $GITHUB_OUTPUT
-        echo "prerelease=${{ inputs.prerelease }}" >> $GITHUB_OUTPUT
-        echo "noTests=true" >> $GITHUB_OUTPUT
+        "withRelease=true" >> $env:GITHUB_OUTPUT
+        "prerelease=${{ inputs.prerelease }}" >> $env:GITHUB_OUTPUT
+        "noTests=true" >> $env:GITHUB_OUTPUT
 
     - name: Detected prerelease build for prerelease branch.
       id: branch-prerelease
       if: ${{ (inputs.prerelease == null || inputs.prerelease == '' || inputs.prerelease == 'none') && startsWith(github.ref, 'refs/heads/prereleases/') }}
       shell: pwsh
       run: |
-        echo "withRelease=true" >> $GITHUB_OUTPUT
-        echo "prerelease=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+        "withRelease=true" >> $env:GITHUB_OUTPUT
+        "prerelease=${{ github.ref_name }}" >> $env:GITHUB_OUTPUT
         # Don't test to improve build times when prereleasing, tests should have succeeded during PR.
-        echo "noTests=true" >> $GITHUB_OUTPUT
-    
+        "noTests=true" >> $env:GITHUB_OUTPUT
+
     - name: Detected release build for main, master or release branch.
       id: branch-release
       if: ${{ (inputs.prerelease == null || inputs.prerelease == '' || inputs.prerelease == 'none') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/releases/')) }}
       shell: pwsh
       run: |
-        echo "withRelease=true" >> $GITHUB_OUTPUT
+        "withRelease=true" >> $env:GITHUB_OUTPUT
         # Don't test to improve build times when releasing, tests should have succeeded during PR.
-        echo "noTests=true" >> $GITHUB_OUTPUT
+        "noTests=true" >> $env:GITHUB_OUTPUT
 
     - name: No release detected.
       id: no-release
