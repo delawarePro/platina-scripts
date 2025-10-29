@@ -60,7 +60,7 @@ inputs:
     description: "Account name for publishing symbols to Azure Artifacts symbol server."
     required: false
     default: ""
-  nuGetSymbolsPAT:
+  nuGetSymbolsToken:
     description: "Personal Access Token for publishing symbols to Azure Artifacts symbol server."
     required: false
     default: ""
@@ -146,7 +146,7 @@ runs:
         symbolServiceUrl: 'https://artifacts.dev.azure.com'
         # Remark: the PAT token requires more access than just Azure Artifacts
         # See: https://github.com/marketplace/actions/publish-symbols
-        personalAccessToken: ${{ inputs.nuGetSymbolsPAT }}
+        personalAccessToken: ${{ inputs.nuGetSymbolsToken }}
 
     - name: Add publish output to pipeline artifacts
       if: ${{ inputs.withPublish == 'true' && inputs.withRelease == 'true' }}
