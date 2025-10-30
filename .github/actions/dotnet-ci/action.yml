@@ -151,7 +151,10 @@ runs:
     - name: DotNet Push
       if: ${{ inputs.withPack == 'true' && inputs.withRelease == 'true' }}
       shell: pwsh
-      run: dotnet nuget push "${{ runner.temp }}/nugets/*.nupkg;${{ runner.temp }}/nugets/*.snupkg;!${{ runner.temp }}/nugets/*.symbols.nupkg" --source ${{ inputs.nuGetSourceUrl}} --api-key ${{ inputs.nuGetAuthToken }}
+      run: |
+         foreach ($package in (Get-ChildItem -Path ${{ runner.temp }}/nugets -Recurse -Include *.nupkg, *.snupkg | Where-Object { $_.Name -notlike "*.symbols.nupkg" })) {
+             dotnet nuget push $package.FullName --source "${{ inputs.NuGetPublishFeedUrl }}" --api-key "${{ inputs.NuGetPublishFeedApiKey }}" --api-key "${{ inputs.NuGetPublishFeedApiKey }}"
+         }
 
       # The above task does publish the .snupkgs, but Visual Studio can't seem to consume them from the artifact feed yet?
       # Therefore, also publish the .pdb to the SymbolServer of this organization.
