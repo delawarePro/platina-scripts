@@ -44,7 +44,7 @@ runs:
       run: |
         "withRelease=true" >> $env:GITHUB_OUTPUT
         # github context's doesn't have the last path segment of branch name like 'Build.SourceBranchName' in Azure DevOps.
-        "prerelease=('${{ github.ref_name }}' -split '/')[ -1 ]" >> $env:GITHUB_OUTPUT
+        "prerelease=$(( '${{ github.ref_name }}' -split '/')[ -1 ])" >> $env:GITHUB_OUTPUT
         # Don't test to improve build times when prereleasing, tests should have succeeded during PR.
         "noTests=true" >> $env:GITHUB_OUTPUT
 
