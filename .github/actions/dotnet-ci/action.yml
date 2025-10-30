@@ -1,3 +1,9 @@
+# Not yet implemented: Docker login & push support.
+# OOTB features in Azure DevOps but not in GitHub:
+#  - UI for test & code coverage results.
+#  - Azure Artifacts feeds requires PAT tokens.
+#  - Step injection for before/after test & release steps.
+#     There is however a workaround by providing a composite action file instead. (See 'ci-beforeTestsSteps' below)
 name: "DotNet CI"
 description: "Builds, tests, packages and publishes a dotnet based solution."
 
@@ -35,6 +41,10 @@ inputs:
     required: false
     default: ""
 
+  prerelease:
+    description: "Pre-release to trigger preparing packages."
+    required: false
+    default: ""
   withPack:
     description: "Whether to run 'dotnet package'."
     required: false
@@ -95,12 +105,20 @@ runs:
       shell: pwsh
       if: ${{ inputs.withPack == 'true' }}
       run: dotnet pack ${{ inputs.solution }} --configuration ${{ inputs.buildConfiguration }} ${{ inputs.postBuildDotnetArgs }} --property:PackageOutputPath=${{ runner.temp }}/nugets
+      # Explicitely pass parameters as environment variables for Platina packaging support.
+      env:
+        Prerelease: ${{ inputs.prerelease }}
+        WithRelease: ${{ inputs.withRelease }}
 
     - name: DotNet Publish
       shell: pwsh
       if: ${{ inputs.withPublish == 'true' }}
       run: |
         dotnet publish ${{ inputs.solution }} --configuration ${{ inputs.buildConfiguration }} ${{ inputs.postBuildDotnetArgs }} --property PublishDir=${{ runner.temp }}/packages
+      # Explicitely pass parameters as environment variables for Platina publish support.
+      env:
+        Prerelease: ${{ inputs.prerelease }}
+        WithRelease: ${{ inputs.withRelease }}
 
     - if: ${{ inputs.noTests != 'true' && hashFiles('./.github/actions/ci-beforeTestsSteps/action.yml') != '' }}
       uses: ./.github/actions/ci-beforeTestsSteps
