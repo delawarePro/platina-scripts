@@ -153,7 +153,7 @@ runs:
       shell: pwsh
       run: |
          foreach ($package in (Get-ChildItem -Path ${{ runner.temp }}/nugets -Recurse -Include *.nupkg, *.snupkg | Where-Object { $_.Name -notlike "*.symbols.nupkg" })) {
-             dotnet nuget push $package.FullName --source "${{ inputs.NuGetPublishFeedUrl }}" --api-key "${{ inputs.NuGetPublishFeedApiKey }}" --api-key "${{ inputs.NuGetPublishFeedApiKey }}"
+             dotnet nuget push $package.FullName --source "${{ inputs.nuGetSourceUrl }}" --api-key "${{ inputs.nuGetAuthToken }}"
          }
 
       # The above task does publish the .snupkgs, but Visual Studio can't seem to consume them from the artifact feed yet?
