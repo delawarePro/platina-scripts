@@ -43,7 +43,8 @@ runs:
       shell: pwsh
       run: |
         "withRelease=true" >> $env:GITHUB_OUTPUT
-        "prerelease=${{ github.ref_name }}" >> $env:GITHUB_OUTPUT
+        # github context's doesn't have the last path segment of branch name like 'Build.SourceBranchName' in Azure DevOps.
+        "prerelease=('${{ github.ref_name }}' -split '/')[ -1 ]" >> $env:GITHUB_OUTPUT
         # Don't test to improve build times when prereleasing, tests should have succeeded during PR.
         "noTests=true" >> $env:GITHUB_OUTPUT
 
@@ -59,7 +60,7 @@ runs:
     - name: No release detected.
       id: no-release
       if: ${{ inputs.prerelease == 'none' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/master' && startsWith(github.ref, 'refs/heads/releases/') != true && startsWith(github.ref, 'refs/heads/prereleases/') != true }}
-      shell: bash
+      shell: pwsh
       run: |
-        echo "withRelease=false" >> $GITHUB_OUTPUT
-        echo "noTests=${{ inputs.noTests }}" >> $GITHUB_OUTPUT
+        "withRelease=false" >> $env:GITHUB_OUTPUT
+        "noTests=${{ inputs.noTests }}" >> $env:GITHUB_OUTPUT
