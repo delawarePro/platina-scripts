@@ -1,0 +1,177 @@
+# Not yet implemented: Docker login & push support.
+# OOTB features in Azure DevOps but not in GitHub:
+#  - UI for test & code coverage results.
+#  - Azure Artifacts feeds requires PAT tokens.
+#  - Step injection for before/after test & release steps.
+#     There is however a workaround by providing a composite action file instead. (See 'ci-beforeTestsSteps' below)
+name: "DotNet CI"
+description: "Builds, tests, packages and publishes a dotnet based solution."
+
+inputs:
+  solution:
+    description: "Optional solution to process, use this if you have multiple solutions or when running on a Windows runner."
+    required: false
+    default: "*.sln" # Default only supported for Linux runners. Linux interprets wildcards and expands them before it is sent to a command.
+
+  dotNetSdkVersion:
+    description: "Specific .NET SDK version to use."
+    required: false
+    default: ""
+
+  buildConfiguration:
+    description: "Configuration name to build."
+    required: false
+    default: "Release"
+  buildPlatform:
+    description: "Platform name to build."
+    required: false
+    default: "Any CPU"
+
+  postBuildDotnetArgs:
+    description: "Arguments passed to dotnet commander post build dotnet tasks like test, pack and publish."
+    required: false
+    default: "--no-restore --no-build"
+
+  noTests:
+    description: "Whether not to run tests."
+    required: false
+    default: "false"
+  testArguments:
+    description: "Optional arguments to pass to test runner."
+    required: false
+    default: ""
+
+  prerelease:
+    description: "Pre-release to trigger preparing packages."
+    required: false
+    default: ""
+  withPack:
+    description: "Whether to run 'dotnet package'."
+    required: false
+    default: "false"
+  withPublish:
+    description: "Whether to run 'dotnet publish' and publish to pipeline artifacts."
+    required: false
+    default: "false"
+  withRelease:
+    description: "Whether to push created NuGets to external feed and/or add publish output to pipeline artifacts."
+    required: false
+    default: "false"
+
+  nuGetSourceUrl:
+    description: "NuGet source URL for private feeds."
+    required: false
+    default: ""
+  nuGetAuthToken:
+    description: "NuGet authentication token for private feeds."
+    required: false
+    default: ""
+  nuGetSymbolsAccountName:
+    description: "Account name for publishing symbols to Azure Artifacts symbol server."
+    required: false
+    default: ""
+  nuGetSymbolsToken:
+    description: "Personal Access Token for publishing symbols to Azure Artifacts symbol server."
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-dotnet@v5
+      if: ${{ inputs.dotNetSdkVersion != '' || (inputs.nuGetSourceUrl != '' && inputs.nuGetAuthToken != '') }}
+      name: Setup DotNet NuGet Feed
+      with:
+        source-url: ${{ inputs.nuGetSourceUrl }}
+        dotnet-version: ${{ inputs.dotNetSdkVersion }}
+      env:
+        NUGET_AUTH_TOKEN: ${{ inputs.nuGetAuthToken }}
+
+    - name: DotNet Restore
+      shell: pwsh
+      run: dotnet restore ${{ inputs.solution }}
+
+    # DotNet restore doesn't restore tools in ./config/dotnet-tools.json, although documentation seems to indicate otherwise.
+    # https://learn.microsoft.com/en-us/dotnet/core/tools/global-tools
+    - name: DotNet Tool Restore
+      shell: pwsh
+      run: dotnet tool restore
+
+    - name: DotNet Build
+      shell: pwsh
+      run: dotnet build ${{ inputs.solution }} --configuration ${{ inputs.buildConfiguration }} /p:Platform="${{ inputs.buildPlatform}}" --no-restore
+
+    - name: DotNet Pack
+      shell: pwsh
+      if: ${{ inputs.withPack == 'true' }}
+      run: dotnet pack ${{ inputs.solution }} --configuration ${{ inputs.buildConfiguration }} ${{ inputs.postBuildDotnetArgs }} --property:PackageOutputPath=${{ runner.temp }}/nugets
+      # Explicitely pass parameters as environment variables for Platina packaging support.
+      env:
+        Prerelease: ${{ inputs.prerelease }}
+        WithRelease: ${{ inputs.withRelease }}
+
+    - name: DotNet Publish
+      shell: pwsh
+      if: ${{ inputs.withPublish == 'true' }}
+      run: |
+        dotnet publish ${{ inputs.solution }} --configuration ${{ inputs.buildConfiguration }} ${{ inputs.postBuildDotnetArgs }} --property PublishDir=${{ runner.temp }}/packages
+      # Explicitely pass parameters as environment variables for Platina publish support.
+      env:
+        Prerelease: ${{ inputs.prerelease }}
+        WithRelease: ${{ inputs.withRelease }}
+
+    - if: ${{ inputs.noTests != 'true' && hashFiles('./.github/actions/ci-beforeTestsSteps/action.yml') != '' }}
+      uses: ./.github/actions/ci-beforeTestsSteps
+
+    - name: DotNet Test
+      if: ${{ inputs.noTests != 'true'}}
+      shell: pwsh
+      run: dotnet test ${{ inputs.solution }} --configuration ${{ inputs.buildConfiguration }} ${{ inputs.postBuildDotnetArgs }} ${{ inputs.testArguments }}
+
+    - name: Publish Test Results
+      if: ${{ inputs.noTests != 'true' && always() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: ${{ runner.temp }}/*.trx
+
+    - name: Publish Code Coverage Results
+      if: ${{ inputs.noTests != 'true'}}
+      uses: actions/upload-artifact@v4
+      with:
+        name: code-coverage-results
+        path: ${{ runner.temp }}/**/*.coverage
+
+    - if: ${{ inputs.noTests != 'true' && hashFiles('./.github/actions/ci-afterTestsSteps/action.yml') != '' }}
+      uses: ./.github/actions/ci-afterTestsSteps
+
+    - if: ${{ inputs.withRelease == 'true' && (inputs.withPack == 'true' || inputs.withPublish == 'true') && hashFiles('./.github/actions/ci-beforeReleaseSteps/action.yml') != '' }}
+      uses: ./.github/actions/ci-beforeReleaseSteps
+  
+    - name: DotNet Push
+      if: ${{ inputs.withPack == 'true' && inputs.withRelease == 'true' }}
+      shell: pwsh
+      run: |
+         foreach ($package in (Get-ChildItem -Path ${{ runner.temp }}/nugets -Recurse -Include *.nupkg, *.snupkg | Where-Object { $_.Name -notlike "*.symbols.nupkg" })) {
+             dotnet nuget push $package.FullName --source "${{ inputs.nuGetSourceUrl }}" --api-key "${{ inputs.nuGetAuthToken }}"
+         }
+
+      # The above task does publish the .snupkgs, but Visual Studio can't seem to consume them from the artifact feed yet?
+      # Therefore, also publish the .pdb to the SymbolServer of this organization.
+      # Users can get rich debugging experience by adding the VSTS symbol server in Visual Studio.
+    - name: Publish symbols to "local" symbol server too
+      if: ${{ inputs.withPack == 'true' && inputs.withRelease == 'true' && inputs.nuGetSymbolsAccountName != '' &&  inputs.nuGetSymbolsPAT != '' }}
+      uses: microsoft/action-publish-symbols@v2.1.6
+      with:
+        accountName: ${{ inputs.nuGetSymbolsAccountName }}
+        symbolServiceUrl: 'https://artifacts.dev.azure.com'
+        # Remark: the PAT token requires more access than just Azure Artifacts
+        # See: https://github.com/marketplace/actions/publish-symbols
+        personalAccessToken: ${{ inputs.nuGetSymbolsToken }}
+
+    - name: Add publish output to pipeline artifacts
+      if: ${{ inputs.withPublish == 'true' && inputs.withRelease == 'true' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: packages
+        path: ${{ runner.temp }}/packages

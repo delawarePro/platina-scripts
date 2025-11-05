@@ -1,0 +1,66 @@
+name: "CI Branch conventions"
+description: "Configure CI flags based on branches."
+
+inputs:
+  noTests:
+    description: "Skip tests."
+    required: false
+    default: "false"
+  prerelease:
+    description: "Pre-release to trigger preparing packages."
+    required: false
+    default: "none"
+
+# Because we splitted branch convention logic per step, we don't know to which step the output parameters needs to map.
+# Therefore we aggregate the outputs of all steps. There should be only one step that matches the 'if' condition and produces the output.
+# You can aggregate the job outputs with a n 'object filter': https://docs.github.com/en/actions/reference/workflows-and-actions/expressions#object-filters
+outputs:
+  noTests:
+    description: "Skip tests."
+    value: ${{ contains(steps.*.outputs.noTests, 'true') }}
+  prerelease:
+    description: "Pre-release to trigger preparing packages."
+    value: ${{ join(steps.*.outputs.prerelease) }}
+  withRelease:
+    description: "Whether to perform a release."
+    value: ${{ contains(steps.*.outputs.withRelease, 'true') }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Detected prerelease build due to parameter.
+      id: param-prerelease
+      if: ${{ inputs.prerelease != null && inputs.prerelease != '' && inputs.prerelease != 'none' }}
+      shell: pwsh
+      run: |
+        "withRelease=true" >> $env:GITHUB_OUTPUT
+        "prerelease=${{ inputs.prerelease }}" >> $env:GITHUB_OUTPUT
+        "noTests=true" >> $env:GITHUB_OUTPUT
+
+    - name: Detected prerelease build for prerelease branch.
+      id: branch-prerelease
+      if: ${{ (inputs.prerelease == null || inputs.prerelease == '' || inputs.prerelease == 'none') && startsWith(github.ref, 'refs/heads/prereleases/') }}
+      shell: pwsh
+      run: |
+        "withRelease=true" >> $env:GITHUB_OUTPUT
+        # github context's doesn't have the last path segment of branch name like 'Build.SourceBranchName' in Azure DevOps.
+        "prerelease=$(( '${{ github.ref_name }}' -split '/')[ -1 ])" >> $env:GITHUB_OUTPUT
+        # Don't test to improve build times when prereleasing, tests should have succeeded during PR.
+        "noTests=true" >> $env:GITHUB_OUTPUT
+
+    - name: Detected release build for main, master or release branch.
+      id: branch-release
+      if: ${{ (inputs.prerelease == null || inputs.prerelease == '' || inputs.prerelease == 'none') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/releases/')) }}
+      shell: pwsh
+      run: |
+        "withRelease=true" >> $env:GITHUB_OUTPUT
+        # Don't test to improve build times when releasing, tests should have succeeded during PR.
+        "noTests=true" >> $env:GITHUB_OUTPUT
+
+    - name: No release detected.
+      id: no-release
+      if: ${{ inputs.prerelease == 'none' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/master' && startsWith(github.ref, 'refs/heads/releases/') != true && startsWith(github.ref, 'refs/heads/prereleases/') != true }}
+      shell: pwsh
+      run: |
+        "withRelease=false" >> $env:GITHUB_OUTPUT
+        "noTests=${{ inputs.noTests }}" >> $env:GITHUB_OUTPUT
