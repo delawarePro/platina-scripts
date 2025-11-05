@@ -9,9 +9,9 @@ description: "Builds, tests, packages and publishes a dotnet based solution."
 
 inputs:
   solution:
-    description: "Optional solution to process, use this if you have multiple solutions."
+    description: "Optional solution to process, use this if you have multiple solutions or when running on a Windows runner."
     required: false
-    default: "*.sln"
+    default: "*.sln" # Default only supported for Linux runners. Linux interprets wildcards and expands them before send it is sent to a command.
 
   dotNetSdkVersion:
     description: "Specific .NET SDK version to use."
