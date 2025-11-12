@@ -30,10 +30,6 @@ parameters:
   type: string
   default: ''
   displayName: 'Optional arguments to pass to test runner.'
-- name: TestCoverageArguments
-  type: string
-  default: '--collect "Code Coverage"'
-  displayName: 'Test coverage arguments for collection.'
 - name: BeforeTestsSteps
   type: stepList
   default: []
@@ -217,7 +213,7 @@ steps:
       inputs:
         command: 'test'
         projects: ${{ parameters.TestProjectsGlob }}
-        arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestCoverageArguments}} ${{ parameters.TestArguments }}'
+        arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestArguments }}'
 
   - ${{ else }}:
     - task: AzureCLI@2
