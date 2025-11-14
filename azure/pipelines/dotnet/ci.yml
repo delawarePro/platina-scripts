@@ -174,24 +174,26 @@ steps:
   - ${{ each step in parameters.BeforeTestsSteps }}:
     - ${{ step }}
   
-  # Set test coverage arguments defaults depending on which SDK is used.
+  # Sets test coverage arguments defaults depending on which SDK is used.
   - task: PowerShell@2
-    displayName: Set 'TestCoverageArguments' defaults
+    displayName: Set 'TestCoverageArguments' variable
     inputs:
       targetType: inline
       script: |
-        if("${{ parameters.TestCoverageArguments }}" -ne "") {
-          Write-Host "##vso[task.setvariable variable=TestCoverageArguments]${{ parameters.TestCoverageArguments }}"
-          exit 0
+        $testCoverageArguments = "${{ parameters.TestCoverageArguments }}"
+
+        if ($testCoverageArguments -eq "") {
+           Write-Host "$(dotnet --version)"
+           if ( [version]$(dotnet --version) -lt [version]'10.0.0' ) {
+             $testCoverageArguments="--coverage"
+           }
+           else
+           { 
+             $testCoverageArguments="--collect \"Code Coverage\""
+           }
         }
-        Write-Host "$(VERSION)"
-        if ( [version]$(dotnet --version) -lt [version]'10.0.0' ) {
-          Write-Host "##vso[task.setvariable variable=TestCoverageArguments]--coverage"
-        }
-        else
-        { 
-          Write-Host "##vso[task.setvariable variable=TestCoverageArguments]--collect \"Code Coverage\""
-        }
+
+        Write-Host "##vso[task.setvariable variable=TestCoverageArguments]$testCoverageArguments"
 
   - ${{ if eq(parameters.AzureSubscription, '') }}:
     - task: DotNetCoreCLI@2
