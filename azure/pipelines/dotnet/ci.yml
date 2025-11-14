@@ -184,11 +184,13 @@ steps:
 
         if ($testCoverageArguments -eq "") {
            Write-Host "$(dotnet --version)"
-           if ( [version]$(dotnet --version) -lt [version]'10.0.0' ) {
+           if ( [version]$(dotnet --version) -ge [version]'10.0.0' ) {
+             Write-Host "Using .NET 10 or higher test coverage arguments."
              $testCoverageArguments="--coverage"
            }
            else
            { 
+             Write-Host "Using .NET below 10 test coverage arguments."
              $testCoverageArguments="--collect `"Code Coverage`""
            }
         }
