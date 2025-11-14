@@ -174,9 +174,9 @@ steps:
   - ${{ each step in parameters.BeforeTestsSteps }}:
     - ${{ step }}
   
+  # Set test coverage arguments defaults depending on which SDK is used.
   - pwsh: Write-Host "##vso[task.setvariable variable=TestCoverageArguments]${{ parameters.TestCoverageArguments }}"
-
-  - ${{ if ne(parameters.TestCoverageArguments, '') }}:
+  - ${{ if eq(parameters.TestCoverageArguments, '') }}:
       - task: PowerShell@2
         displayName: Set 'TestCoverageArguments' defaults
         inputs:
