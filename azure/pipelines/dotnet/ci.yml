@@ -95,9 +95,6 @@ parameters:
   default: ''
   displayName: 'Optional container registry login server to push containers to.'
 
-variables:
-  TestCoverageArguments: ${{ parameters.TestCoverageArguments }}
-
 steps:
 - ${{ if ne(parameters.DotNetSdkVersion, '') }}:
   - task: UseDotNet@2
@@ -106,21 +103,6 @@ steps:
       packageType: 'sdk'
       version: ${{ parameters.DotNetSdkVersion }}
       includePreviewVersions: true
-
-- ${{ if ne(parameters.TestCoverageArguments, '') }}:
-    - task: PowerShell@2
-      displayName: Set 'TestCoverageArguments' defaults
-      inputs:
-        targetType: inline
-        script: |
-          Write-Host "$(VERSION)"
-          if ( [version]$(dotnet --version) -lt [version]'10.0.0' ) {
-            Write-Host "##vso[task.setvariable variable=TestCoverageArguments]--coverage"
-          }
-          else
-          { 
-            Write-Host "##vso[task.setvariable variable=TestCoverageArguments]--collect \"Code Coverage\""
-          }
 
 - ${{ if eq(parameters.WithNuGetCache, 'true') }}:
   # As we don't use package lock files, we want to make sure our cache isn't too far behind the dotnet restore.
@@ -191,6 +173,23 @@ steps:
 - ${{ if ne(parameters.NoTests, 'true') }}:
   - ${{ each step in parameters.BeforeTestsSteps }}:
     - ${{ step }}
+  
+  - pwsh: Write-Host "##vso[task.setvariable variable=TestCoverageArguments]${{ parameters.TestCoverageArguments }}"
+
+  - ${{ if ne(parameters.TestCoverageArguments, '') }}:
+      - task: PowerShell@2
+        displayName: Set 'TestCoverageArguments' defaults
+        inputs:
+          targetType: inline
+          script: |
+            Write-Host "$(VERSION)"
+            if ( [version]$(dotnet --version) -lt [version]'10.0.0' ) {
+              Write-Host "##vso[task.setvariable variable=TestCoverageArguments]--coverage"
+            }
+            else
+            { 
+              Write-Host "##vso[task.setvariable variable=TestCoverageArguments]--collect \"Code Coverage\""
+            }
 
   - ${{ if eq(parameters.AzureSubscription, '') }}:
     - task: DotNetCoreCLI@2
