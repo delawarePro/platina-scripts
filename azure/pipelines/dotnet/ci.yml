@@ -184,7 +184,7 @@ steps:
       targetType: inline
       script: |
         $testCoverageArguments = ( "${{ parameters.TestCoverageArguments }}" -eq "" ) ? ( [version](dotnet --version) -ge [version]'10.0.0' ) ? "--coverage" : "--collect `"Code Coverage `"" : "${{ parameters.TestCoverageArguments }}"
-        Write-Host "##vso[task.setvariable variable=TestCoverageArguments]$testCoverageArguments"s
+        Write-Host "##vso[task.setvariable variable=TestCoverageArguments]$testCoverageArguments"
 
   - ${{ if eq(parameters.AzureSubscription, '') }}:
     - task: DotNetCoreCLI@2
