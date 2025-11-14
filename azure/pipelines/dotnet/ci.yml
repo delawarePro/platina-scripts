@@ -189,7 +189,7 @@ steps:
            }
            else
            { 
-             $testCoverageArguments="--collect \"Code Coverage\""
+             $testCoverageArguments="--collect `"Code Coverage`""
            }
         }
 
@@ -204,7 +204,6 @@ steps:
         arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} ${{ variables.TestCoverageArguments}} ${{ parameters.TestArguments }}'
 
   - ${{ else }}:
-    # todo: below not yet compatible with MTP & .NET 10.
     - task: AzureCLI@2
       displayName: 'DotNet Test (AzureCLI)'
       inputs:
@@ -212,8 +211,15 @@ steps:
         scriptType: 'pscore'
         scriptLocation: 'inlineScript'
         inlineScript: |
-          Get-ChildItem -Filter ${{ parameters.Solution }} | Foreach-Object {
-            &dotnet test "$($_.FullName)" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ variables.TestCoverageArguments}} ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestArguments }}
+          Get-ChildItem -Filter ${{ parameters.TestProjectsGlob }} | Foreach-Object {
+            if ( [version]$(dotnet --version) -lt [version]'10.0.0' )
+            {
+              &dotnet test --project "$($_.FullName)" --report-trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ variables.TestCoverageArguments}} ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestArguments }}
+            }
+            else
+            {
+              &dotnet test "$($_.FullName)" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} --collect "Code Coverage" ${{ parameters.TestArguments }}
+            }
           }
 
     - task: PublishTestResults@2
