@@ -174,27 +174,16 @@ steps:
   - ${{ each step in parameters.BeforeTestsSteps }}:
     - ${{ step }}
   
-  # Sets test coverage arguments defaults depending on which SDK is used.
+  # Sets test coverage arguments defaults when not provided.
+  # Defaults depends whether MTP is used with .NET 10.
+  # Use '--coverage' for .NET 10 and higher, '--collect "Code Coverage"' for lower versions.
+  # todo: For now we assume MTP runner is used for .NET 10 and higher?
   - task: PowerShell@2
-    displayName: Set 'TestCoverageArguments' variable
+    displayName: Set 'TestCoverageArguments'
     inputs:
       targetType: inline
       script: |
-        $testCoverageArguments = "${{ parameters.TestCoverageArguments }}"
-
-        if ($testCoverageArguments -eq "") {
-           Write-Host "$(dotnet --version)"
-           if ( [version]$(dotnet --version) -ge [version]'10.0.0' ) {
-             Write-Host "Using .NET 10 or higher test coverage arguments."
-             $testCoverageArguments="--coverage"
-           }
-           else
-           { 
-             Write-Host "Using .NET below 10 test coverage arguments."
-             $testCoverageArguments="--collect `"Code Coverage`""
-           }
-        }
-
+        $testCoverageArguments = ( "${{ parameters.TestCoverageArguments }}" -eq "" ) ? ( [version](dotnet --version) -ge [version]'10.0.0' ) ? "--coverage" : "--collect 'Code Coverage'" : "${{ parameters.TestCoverageArguments }}"
         Write-Host "##vso[task.setvariable variable=TestCoverageArguments]$testCoverageArguments"
 
   - ${{ if eq(parameters.AzureSubscription, '') }}:
@@ -213,11 +202,12 @@ steps:
         scriptType: 'pscore'
         scriptLocation: 'inlineScript'
         inlineScript: |
+          $dotNetSdkVersion = [version]$(dotnet --version)
           Get-ChildItem -Filter ${{ parameters.TestProjectsGlob }} | Foreach-Object {
-            if ( [version]$(dotnet --version) -lt [version]'10.0.0' )
+            if ( $dotNetSdkVersion -lt [version]'10.0.0' )
             {
               &dotnet test --project "$($_.FullName)" --report-trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} $() ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestArguments }}
-            }TestCoverageArguments
+            }
             else
             {
               &dotnet test "$($_.FullName)" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} $(TestCoverageArguments) ${{ parameters.TestArguments }}
