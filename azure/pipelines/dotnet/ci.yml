@@ -30,6 +30,10 @@ parameters:
   type: string
   default: ''
   displayName: 'Optional arguments to pass to test runner.'
+- name: TestCoverageArguments
+  type: string
+  default: ''
+  displayName: 'Test coverage arguments for collection.'
 - name: BeforeTestsSteps
   type: stepList
   default: []
@@ -91,6 +95,9 @@ parameters:
   default: ''
   displayName: 'Optional container registry login server to push containers to.'
 
+variables:
+  TestCoverageArguments: ${{ parameters.TestCoverageArguments }}
+
 steps:
 - ${{ if ne(parameters.DotNetSdkVersion, '') }}:
   - task: UseDotNet@2
@@ -99,6 +106,21 @@ steps:
       packageType: 'sdk'
       version: ${{ parameters.DotNetSdkVersion }}
       includePreviewVersions: true
+
+- ${{ if ne(parameters.TestCoverageArguments, '') }}:
+    - task: PowerShell@2
+      displayName: Set 'TestCoverageArguments' defaults
+      inputs:
+        targetType: inline
+        script: |
+          Write-Host "$(VERSION)"
+          if ( [version]$(dotnet --version) -lt [version]'10.0.0' ) {
+            Write-Host "##vso[task.setvariable variable=TestCoverageArguments]--coverage"
+          }
+          else
+          { 
+            Write-Host "##vso[task.setvariable variable=TestCoverageArguments]--collect \"Code Coverage\""
+          }
 
 - ${{ if eq(parameters.WithNuGetCache, 'true') }}:
   # As we don't use package lock files, we want to make sure our cache isn't too far behind the dotnet restore.
@@ -176,7 +198,7 @@ steps:
       inputs:
         command: 'test'
         projects: ${{ parameters.TestProjectsGlob }}
-        arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestArguments }}'
+        arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} ${{ variables.TestCoverageArguments}} ${{ parameters.TestArguments }}'
 
   - ${{ else }}:
     # todo: below not yet compatible with MTP & .NET 10.
@@ -188,7 +210,7 @@ steps:
         scriptLocation: 'inlineScript'
         inlineScript: |
           Get-ChildItem -Filter ${{ parameters.Solution }} | Foreach-Object {
-            &dotnet test "$($_.FullName)" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.TestCoverageArguments}} ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestArguments }}
+            &dotnet test "$($_.FullName)" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ variables.TestCoverageArguments}} ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestArguments }}
           }
 
     - task: PublishTestResults@2
