@@ -203,7 +203,7 @@ steps:
       inputs:
         command: 'test'
         projects: ${{ parameters.TestProjectsGlob }}
-        arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} ${{ variables.TestCoverageArguments}} ${{ parameters.TestArguments }}'
+        arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} $(TestCoverageArguments) ${{ parameters.TestArguments }}'
 
   - ${{ else }}:
     - task: AzureCLI@2
@@ -216,11 +216,11 @@ steps:
           Get-ChildItem -Filter ${{ parameters.TestProjectsGlob }} | Foreach-Object {
             if ( [version]$(dotnet --version) -lt [version]'10.0.0' )
             {
-              &dotnet test --project "$($_.FullName)" --report-trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ variables.TestCoverageArguments}} ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestArguments }}
-            }
+              &dotnet test --project "$($_.FullName)" --report-trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} $() ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestArguments }}
+            }TestCoverageArguments
             else
             {
-              &dotnet test "$($_.FullName)" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} --collect "Code Coverage" ${{ parameters.TestArguments }}
+              &dotnet test "$($_.FullName)" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} $(TestCoverageArguments) ${{ parameters.TestArguments }}
             }
           }
 
