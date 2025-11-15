@@ -136,9 +136,9 @@ runs:
       shell: pwsh
       run: |
           $dotNetSdkVersion = [version]$(dotnet --version)
-          $testCoverageArguments = ( "${{ parameters.TestCoverageArguments }}" -eq "" ) ? ( $dotNetSdkVersion -ge [version]'10.0.0' ) ? "--coverage" : "--collect `"Code Coverage `"" : "${{ inputs.testCoverageArguments }}"
+          $testCoverageArguments = ( "${{ inputs.testCoverageArguments }}" -eq "" ) ? ( $dotNetSdkVersion -ge [version]'10.0.0' ) ? "--coverage" : "--collect `"Code Coverage `"" : "${{ inputs.testCoverageArguments }}"
 
-          foreach($project in (Get-ChildItem -Filter ${{ parameters.TestProjectsGlob }}))
+          foreach($project in (Get-ChildItem -Filter ${{ inputs.testProjectsGlob }}))
           {
             if ( $dotNetSdkVersion -lt [version]'10.0.0' )
             {
