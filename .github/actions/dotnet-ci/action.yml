@@ -138,7 +138,7 @@ runs:
           $dotNetSdkVersion = [version]$(dotnet --version)
           $testCoverageArguments = ( "${{ inputs.testCoverageArguments }}" -eq "" ) ? ( $dotNetSdkVersion -ge [version]'10.0.0' ) ? "--coverage" : "--collect `"Code Coverage `"" : "${{ inputs.testCoverageArguments }}"
 
-          foreach($project in (Get-ChildItem -Filter ${{ inputs.testProjectsGlob }}))
+          foreach($project in (Resolve-Path ${{ inputs.testProjectsGlob }} -ErrorAction SilentlyContinue | Get-Item))
           {
             if ( $dotNetSdkVersion -lt [version]'10.0.0' )
             {
