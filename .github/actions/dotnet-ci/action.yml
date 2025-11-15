@@ -36,8 +36,16 @@ inputs:
     description: "Whether not to run tests."
     required: false
     default: "false"
+  testProjectsGlob:
+   description: "Glob to match test projects."
+   required: false
+   default: "**/*[Tt]ests/*.csproj"
   testArguments:
     description: "Optional arguments to pass to test runner."
+    required: false
+    default: ""
+  testCoverageArguments:
+    description: "Test coverage arguments for collection."
     required: false
     default: ""
 
@@ -126,7 +134,21 @@ runs:
     - name: DotNet Test
       if: ${{ inputs.noTests != 'true'}}
       shell: pwsh
-      run: dotnet test ${{ inputs.solution }} --configuration ${{ inputs.buildConfiguration }} ${{ inputs.postBuildDotnetArgs }} ${{ inputs.testArguments }}
+      run: |
+          $dotNetSdkVersion = [version]$(dotnet --version)
+          $testCoverageArguments = ( "${{ parameters.TestCoverageArguments }}" -eq "" ) ? ( $dotNetSdkVersion -ge [version]'10.0.0' ) ? "--coverage" : "--collect `"Code Coverage `"" : "${{ inputs.testCoverageArguments }}"
+
+          foreach($project in (Get-ChildItem -Filter ${{ parameters.TestProjectsGlob }}))
+          {
+            if ( $dotNetSdkVersion -lt [version]'10.0.0' )
+            {
+              &dotnet test --project "$($project.FullName)" --report-trx --results-directory ${{ runner.temp }} --configuration ${{ inputs.buildConfiguration }} $() ${{ inputs.postBuildDotnetArgs }} $testCoverageArguments ${{ inputs.testArguments }}
+            }
+            else
+            {
+              &dotnet test "$($project.FullName)" --logger trx --results-directory ${{ runner.temp }} --configuration ${{ inputs.buildConfiguration }} ${{ inputs.postBuildDotnetArgs }} $testCoverageArguments ${{ inputs.testArguments }}
+            }
+          }
 
     - name: Publish Test Results
       if: ${{ inputs.noTests != 'true' && always() }}
