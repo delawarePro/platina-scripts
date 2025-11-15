@@ -142,7 +142,7 @@ runs:
 
           foreach($project in (Resolve-Path ${{ inputs.testProjectsGlob }} -ErrorAction SilentlyContinue | Get-Item))
           {
-            if ( $dotNetSdkVersion -lt [version]'10.0.0' )
+            if ( $dotNetSdkVersion -ge [version]'10.0.0' )
             {
               &dotnet test --project "$($project.FullName)" --report-trx --results-directory ${{ runner.temp }} --configuration ${{ inputs.buildConfiguration }} $() ${{ inputs.postBuildDotnetArgs }} $testCoverageArguments ${{ inputs.testArguments }}
             }

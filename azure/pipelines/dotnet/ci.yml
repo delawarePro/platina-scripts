@@ -204,7 +204,7 @@ steps:
         inlineScript: |
           $dotNetSdkVersion = [version]$(dotnet --version)
           Get-ChildItem -Filter ${{ parameters.TestProjectsGlob }} | Foreach-Object {
-            if ( $dotNetSdkVersion -lt [version]'10.0.0' )
+            if ( $dotNetSdkVersion -ge [version]'10.0.0' )
             {
               &dotnet test --project "$($_.FullName)" --report-trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} $() ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestArguments }}
             }
