@@ -186,7 +186,6 @@ steps:
       modifyOutputPath: false
       zipAfterPublish: false
 
-
 - ${{ if ne(parameters.NoTests, 'true') }}:
   - ${{ each step in parameters.BeforeTestsSteps }}:
     - ${{ step }}
