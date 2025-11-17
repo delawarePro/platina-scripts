@@ -113,7 +113,7 @@ runs:
       shell: pwsh
       if: ${{ inputs.withPack == 'true' }}
       run: dotnet pack ${{ inputs.solution }} --configuration ${{ inputs.buildConfiguration }} ${{ inputs.postBuildDotnetArgs }} --property:PackageOutputPath=${{ runner.temp }}/nugets
-      # Explicitely pass parameters as environment variables for Platina packaging support.
+      # Explicitly pass parameters as environment variables for Platina packaging support.
       env:
         Prerelease: ${{ inputs.prerelease }}
         WithRelease: ${{ inputs.withRelease }}
@@ -123,7 +123,7 @@ runs:
       if: ${{ inputs.withPublish == 'true' }}
       run: |
         dotnet publish ${{ inputs.solution }} --configuration ${{ inputs.buildConfiguration }} ${{ inputs.postBuildDotnetArgs }} --property PublishDir=${{ runner.temp }}/packages
-      # Explicitely pass parameters as environment variables for Platina publish support.
+      # Explicitly pass parameters as environment variables for Platina publish support.
       env:
         Prerelease: ${{ inputs.prerelease }}
         WithRelease: ${{ inputs.withRelease }}
@@ -182,7 +182,7 @@ runs:
       # Therefore, also publish the .pdb to the SymbolServer of this organization.
       # Users can get rich debugging experience by adding the VSTS symbol server in Visual Studio.
     - name: Publish symbols to "local" symbol server too
-      if: ${{ inputs.withPack == 'true' && inputs.withRelease == 'true' && inputs.nuGetSymbolsAccountName != '' &&  inputs.nuGetSymbolsPAT != '' }}
+      if: ${{ inputs.withPack == 'true' && inputs.withRelease == 'true' && inputs.nuGetSymbolsAccountName != '' &&  inputs.nuGetSymbolsToken != '' }}
       uses: microsoft/action-publish-symbols@v2.1.6
       with:
         accountName: ${{ inputs.nuGetSymbolsAccountName }}
