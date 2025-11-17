@@ -179,7 +179,7 @@ steps:
   # Use '--coverage' for .NET 10 and higher, '--collect "Code Coverage"' for lower versions.
   # TBD: For now, assume that MTP runner is used when NET 10 and higher?
   - task: PowerShell@2
-    displayName: Set 'TestCoverageArgument default'
+    displayName: Set TestCoverageArgument default
     inputs:
       targetType: inline
       script: |
