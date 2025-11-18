@@ -145,7 +145,7 @@ runs:
             if ( $isMtp )
             {
               # Change working directory because global.json is expected in the working directory by 'dotnet test'.
-              Set-Location -Path $_.Directory
+              Set-Location -Path $solutionDir
               $testCoverageArguments = ( "${{ inputs.testCoverageArguments }}" -eq "" ) ? "--coverage" : "${{ inputs.testCoverageArguments }}"
               &dotnet test --project "$($project.FullName)" --report-trx --results-directory ${{ runner.temp }} --configuration ${{ inputs.buildConfiguration }} ${{ inputs.postBuildDotnetArgs }} $testCoverageArguments ${{ inputs.testArguments }}
             }
