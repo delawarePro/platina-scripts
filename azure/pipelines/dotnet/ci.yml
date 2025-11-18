@@ -222,7 +222,7 @@ steps:
               &dotnet test --project "$_" --report-trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} $testCoverageArguments ${{ parameters.TestArguments }}
             }
             else {
-              $testCoverageArguments = ( "${{ parameters.TestCoverageArguments }}" -eq "" ) ? "--collect `"Code Coverage`"" : "${{ parameters.TestCoverageArguments }}"
+              $testCoverageArguments = ( "${{ parameters.TestCoverageArguments }}" -eq "" ) ? @("--collect", "Code Coverage") : "${{ parameters.TestCoverageArguments }}"
               &dotnet test "$_" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} $testCoverageArguments ${{ parameters.TestArguments }}
             }
           }
@@ -248,7 +248,7 @@ steps:
               &dotnet test --project "$_" --report-trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} $testCoverageArguments ${{ parameters.TestArguments }}
             }
             else {
-              $testCoverageArguments = ( "${{ parameters.TestCoverageArguments }}" -eq "" ) ? "--collect `"Code Coverage`"" : "${{ parameters.TestCoverageArguments }}"
+              $testCoverageArguments = ( "${{ parameters.TestCoverageArguments }}" -eq "" ) ? @("--collect", "Code Coverage") : "${{ parameters.TestCoverageArguments }}"
               &dotnet test "$_" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} $testCoverageArguments ${{ parameters.TestArguments }}
             }
           }
