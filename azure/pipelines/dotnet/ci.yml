@@ -211,7 +211,7 @@ steps:
           # Sets test coverage default when not provided, defaults depends whether native MTP is configured with .NET 10 or not.
           # Use '--coverage' when using native MTP, '--collect "Code Coverage"' for MTP over VSTest
           $solutionDir = (Get-Item "${{ parameters.Solution }}").Directory
-          $isMtp = (Get-Content (Join-Path $solutionDir "global.json") -Raw | ConvertFrom-Json).test.runner -eq "Microsoft.Testing.Platform"
+          $isMtp = (Get-Content (Join-Path $solutionDir "global.json") -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json).test.runner -eq "Microsoft.Testing.Platform"
           $testCoverageArguments = ( "${{ parameters.TestCoverageArguments }}" -eq "" ) ? ( $isMtp ) ? "--coverage" : "--collect `"Code Coverage`"" : "${{ parameters.TestCoverageArguments }}"
 
           # todo: Resolve global.json solution file directory in multi-solution repo.
@@ -237,7 +237,7 @@ steps:
           # Sets test coverage default when not provided, defaults depends whether native MTP is configured with .NET 10 or not.
           # Use '--coverage' when using native MTP, '--collect "Code Coverage"' for MTP over VSTest.
           $solutionDir = (Get-Item "${{ parameters.Solution }}").Directory
-          $isMtp = (Get-Content (Join-Path $solutionDir "global.json") -Raw | ConvertFrom-Json).test.runner -eq "Microsoft.Testing.Platform"
+          $isMtp = (Get-Content (Join-Path $solutionDir "global.json") -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json).test.runner -eq "Microsoft.Testing.Platform"
           $testCoverageArguments = ( "${{ parameters.TestCoverageArguments }}" -eq "" ) ? ( $isMtp ) ? "--coverage" : "--collect `"Code Coverage`"" : "${{ parameters.TestCoverageArguments }}"
 
           # todo: Resolve global.json solution file directory in multi-solution repo.
