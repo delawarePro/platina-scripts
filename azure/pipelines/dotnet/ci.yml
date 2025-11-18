@@ -232,7 +232,7 @@ steps:
               &dotnet test "$_" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} $(TestCoverageArguments) ${{ parameters.TestArguments }}
             }
           }
-      workingDirectory: $(WorkingDirectory)
+        workingDirectory: $(WorkingDirectory)
         
   - ${{ else }}:
     - task: AzureCLI@2
@@ -250,7 +250,7 @@ steps:
               &dotnet test "$_" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} $(TestCoverageArguments) ${{ parameters.TestArguments }}
             }
           }
-      workingDirectory: $(WorkingDirectory)
+        workingDirectory: $(WorkingDirectory)
 
     - task: PublishTestResults@2
       displayName: 'Publish Test Results'
