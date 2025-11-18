@@ -177,7 +177,7 @@ steps:
     command: 'build'
     projects: ${{ parameters.Solution }}
     arguments: '--configuration ${{ parameters.BuildConfiguration }} /p:Platform="${{ parameters.BuildPlatform }}" --no-restore'
-    workingDirectory: $(WorkingDirectory)
+    #workingDirectory: $(WorkingDirectory)
 
 # Execute packing and publishing before tests so that tests could optionally use publish output.
 # Next to that, Platina test init will be given more time as well.
