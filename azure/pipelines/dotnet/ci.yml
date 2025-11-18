@@ -121,15 +121,19 @@ steps:
         nuget | "$(Agent.OS)"
       path: $(NUGET_PACKAGES)
     condition: ne(variables.NUGET_PACKAGES, '')
-  
-# Sets test coverage default when not provided
-# Defaults depends whether MTP is configured with .NET 10 or not.
-# Use '--coverage' for .NET 10 and higher, '--collect "Code Coverage"' for lower versions.
+
+# * Detects working directory as global.json is expected in the working directory by 'dotnet test'.
+# * Sets test coverage default when not provided
+#   Defaults depends whether MTP is configured with .NET 10 or not.
+#    Use '--coverage' for .NET 10 and higher, '--collect "Code Coverage"' for lower versions.
 - task: PowerShell@2
   displayName: Set defaults
   inputs:
     targetType: inline
     script: |
+      $workingDir = (Get-Item "${{ parameters.Solution }}").Directory
+      Write-Host "##vso[task.setvariable variable=WorkingDirectory]$workingDir"
+      Write-Host "Solution working directory: $workingDir"
       $testCoverageArguments = ( "${{ parameters.TestCoverageArguments }}" -eq "" ) ? ( [version](dotnet --version) -ge [version]'10.0.0' ) ? "--coverage" : "--collect `"Code Coverage `"" : "${{ parameters.TestCoverageArguments }}"
       Write-Host "##vso[task.setvariable variable=TestCoverageArguments]$testCoverageArguments"
       Write-Host "Test coverage arguments: $testCoverageArguments"
@@ -228,6 +232,7 @@ steps:
               &dotnet test "$_" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} $(TestCoverageArguments) ${{ parameters.TestArguments }}
             }
           }
+      workingDirectory: $(WorkingDirectory)
         
   - ${{ else }}:
     - task: AzureCLI@2
@@ -245,6 +250,7 @@ steps:
               &dotnet test "$_" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} $(TestCoverageArguments) ${{ parameters.TestArguments }}
             }
           }
+      workingDirectory: $(WorkingDirectory)
 
     - task: PublishTestResults@2
       displayName: 'Publish Test Results'
