@@ -212,16 +212,16 @@ steps:
           # Use '--coverage' when using native MTP, '--collect "Code Coverage"' for MTP over VSTest
           $solutionDir = (Get-Item "${{ parameters.Solution }}").Directory
           $isMtp = (Get-Content (Join-Path $solutionDir "global.json") -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json).test.runner -eq "Microsoft.Testing.Platform"
-          $testCoverageArguments = ( "${{ parameters.TestCoverageArguments }}" -eq "" ) ? ( $isMtp ) ? "--coverage" : "--collect `"Code Coverage`"" : "${{ parameters.TestCoverageArguments }}"
 
-          # todo: Resolve global.json solution file directory in multi-solution repo.
           Resolve-Path ${{ parameters.TestProjectsGlob }} -ErrorAction SilentlyContinue | Get-Item | Foreach-Object {
             if ( $isMtp ) {
               # Change working directory because global.json is expected in the working directory by 'dotnet test'.
               Set-Location -Path $_.Directory
+              $testCoverageArguments = ( "${{ parameters.TestCoverageArguments }}" -eq "" ) ? "--coverage" : "${{ parameters.TestCoverageArguments }}"
               &dotnet test --project "$_" --report-trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} $testCoverageArguments ${{ parameters.TestArguments }}
             }
             else {
+              $testCoverageArguments = ( "${{ parameters.TestCoverageArguments }}" -eq "" ) ? "--collect `"Code Coverage`"" : "${{ parameters.TestCoverageArguments }}"
               &dotnet test "$_" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} $testCoverageArguments ${{ parameters.TestArguments }}
             }
           }
@@ -238,16 +238,16 @@ steps:
           # Use '--coverage' when using native MTP, '--collect "Code Coverage"' for MTP over VSTest.
           $solutionDir = (Get-Item "${{ parameters.Solution }}").Directory
           $isMtp = (Get-Content (Join-Path $solutionDir "global.json") -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json).test.runner -eq "Microsoft.Testing.Platform"
-          $testCoverageArguments = ( "${{ parameters.TestCoverageArguments }}" -eq "" ) ? ( $isMtp ) ? "--coverage" : "--collect `"Code Coverage`"" : "${{ parameters.TestCoverageArguments }}"
 
-          # todo: Resolve global.json solution file directory in multi-solution repo.
           Resolve-Path ${{ parameters.TestProjectsGlob }} -ErrorAction SilentlyContinue | Get-Item | Foreach-Object {
             if ( $isMtp ) {
               # Change working directory because global.json is expected in the working directory by 'dotnet test'.
               Set-Location -Path $_.Directory
+              $testCoverageArguments = ( "${{ parameters.TestCoverageArguments }}" -eq "" ) ? "--coverage" : "${{ parameters.TestCoverageArguments }}"
               &dotnet test --project "$_" --report-trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} $testCoverageArguments ${{ parameters.TestArguments }}
             }
             else {
+              $testCoverageArguments = ( "${{ parameters.TestCoverageArguments }}" -eq "" ) ? "--collect `"Code Coverage`"" : "${{ parameters.TestCoverageArguments }}"
               &dotnet test "$_" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} $testCoverageArguments ${{ parameters.TestArguments }}
             }
           }
