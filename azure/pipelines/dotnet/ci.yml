@@ -136,7 +136,7 @@ steps:
       Write-Host "Solution working directory: $workingDir"
       $testCoverageArguments = ( "${{ parameters.TestCoverageArguments }}" -eq "" ) ? ( [version](dotnet --version) -ge [version]'10.0.0' ) ? "--coverage" : "--collect `"Code Coverage `"" : "${{ parameters.TestCoverageArguments }}"
       Write-Host "##vso[task.setvariable variable=TestCoverageArguments]$testCoverageArguments"
-      Write-Host "Default test coverage arguments: $testCoverageArguments"
+      Write-Host "Test coverage arguments: $testCoverageArguments"
         
 - task: DotNetCoreCLI@2
   displayName: 'DotNet Restore'
@@ -220,14 +220,22 @@ steps:
           exit 0;
 
   - ${{ if eq(parameters.AzureSubscription, '') }}:
-    - task: DotNetCoreCLI@2
-      displayName: 'DotNet Test'
+    # We don't use DotNetCoreCLI@2 for testing as it doesn't properly support nested solution folders in combination with MTP.
+    - task: PowerShell@2
+      displayName: DotNet Test
       inputs:
-        command: 'test'
-        projects: ${{ parameters.TestProjectsGlob }}
-        arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} $(TestCoverageArguments) ${{ parameters.TestArguments }}'
+        targetType: inline
+        script: |
+          Resolve-Path ${{ parameters.TestProjectsGlob }} -ErrorAction SilentlyContinue | Get-Item | Foreach-Object {
+            if ( [version]$(dotnet --version) -ge [version]'10.0.0' ) {
+              &dotnet test --project "$_" --report-trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} $(TestCoverageArguments) ${{ parameters.TestArguments }}
+            }
+            else {
+              &dotnet test "$_" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} $(TestCoverageArguments) ${{ parameters.TestArguments }}
+            }
+          }
         workingDirectory: $(WorkingDirectory)
-
+        
   - ${{ else }}:
     - task: AzureCLI@2
       displayName: 'DotNet Test (AzureCLI)'
@@ -237,12 +245,10 @@ steps:
         scriptLocation: 'inlineScript'
         inlineScript: |
           Resolve-Path ${{ parameters.TestProjectsGlob }} -ErrorAction SilentlyContinue | Get-Item | Foreach-Object {
-            if ( [version]$(dotnet --version) -ge [version]'10.0.0' )
-            {
+            if ( [version]$(dotnet --version) -ge [version]'10.0.0' ) {
               &dotnet test --project "$_" --report-trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} $(TestCoverageArguments) ${{ parameters.TestArguments }}
             }
-            else
-            {
+            else {
               &dotnet test "$_" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} $(TestCoverageArguments) ${{ parameters.TestArguments }}
             }
           }
