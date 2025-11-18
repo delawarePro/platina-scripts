@@ -210,7 +210,7 @@ steps:
         script: |
           # Sets test coverage default when not provided, defaults depends whether native MTP is configured with .NET 10 or not.
           # Use '--coverage' when using native MTP, '--collect "Code Coverage"' for MTP over VSTest.
-          $isMtp = (Get-Content $_.Directory\global.json -Raw | ConvertFrom-Json).test.runner -eq "Microsoft.Testing.Platform"
+          # $isMtp = (Get-Content .\global.json -Raw | ConvertFrom-Json).test.runner -eq "Microsoft.Testing.Platform"
           # $testCoverageArguments = ( "${{ parameters.TestCoverageArguments }}" -eq "" ) ? ( $isMtp ) ? "--coverage" : "--collect `"Code Coverage`"" : "${{ parameters.TestCoverageArguments }}"
           $testCoverageArguments = ( "${{ parameters.TestCoverageArguments }}" -eq "" ) ? ( [version](dotnet --version) -ge [version]'10.0.0' ) ? "--coverage" : "--collect `"Code Coverage`"" : "${{ parameters.TestCoverageArguments }}"
           
