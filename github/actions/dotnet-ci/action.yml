@@ -135,18 +135,24 @@ runs:
       if: ${{ inputs.noTests != 'true'}}
       shell: pwsh
       run: |
-          $dotNetSdkVersion = [version]$(dotnet --version)
-          $testCoverageArguments = ( "${{ inputs.testCoverageArguments }}" -eq "" ) ? ( $dotNetSdkVersion -ge [version]'10.0.0' ) ? "--coverage" : "--collect `"Code Coverage `"" : "${{ inputs.testCoverageArguments }}"
+          # Sets test coverage default when not provided, defaults depends whether native MTP is configured with .NET 10 or not.
+          # Use '--coverage' when using native MTP, '--collect "Code Coverage"' for MTP over VSTest
+          $solutionDir = (Get-Item "${{ inputs.solution }}").Directory
+          $isMtp = (Get-Content (Join-Path $solutionDir "global.json") -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json).test.runner -eq "Microsoft.Testing.Platform"
 
           foreach($project in (Resolve-Path ${{ inputs.testProjectsGlob }} -ErrorAction SilentlyContinue | Get-Item))
           {
-            if ( $dotNetSdkVersion -ge [version]'10.0.0' )
+            if ( $isMtp )
             {
-              &dotnet test --project "$($project.FullName)" --report-trx --results-directory ${{ runner.temp }} --configuration ${{ inputs.buildConfiguration }} $() ${{ inputs.postBuildDotnetArgs }} $testCoverageArguments ${{ inputs.testArguments }}
+              # Change working directory because global.json is expected in the working directory by 'dotnet test'.
+              Set-Location -Path $_.Directory
+              $testCoverageArguments = ( "${{ inputs.testCoverageArguments }}" -eq "" ) ? "--coverage" : "${{ inputs.testCoverageArguments }}"
+              &dotnet test --project "$($project.FullName)" --report-trx --results-directory $(Agent.TempDirectory) --configuration ${{ inputs.buildConfiguration }} ${{ inputs.postBuildDotnetArgs }} $testCoverageArguments ${{ inputs.testArguments }}
             }
             else
             {
-              &dotnet test "$($project.FullName)" --logger trx --results-directory ${{ runner.temp }} --configuration ${{ inputs.buildConfiguration }} ${{ inputs.postBuildDotnetArgs }} $testCoverageArguments ${{ inputs.testArguments }}
+              $testCoverageArguments = ( "${{ inputs.testCoverageArguments }}" -eq "" ) ? @("--collect", "Code Coverage") : "${{ inputs.testCoverageArguments }}"
+              &dotnet test "$($project.FullName)" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ inputs.buildConfiguration }} ${{ inputs.postBuildDotnetArgs }} $testCoverageArguments ${{ inputs.testArguments }}
             }
           }
 
