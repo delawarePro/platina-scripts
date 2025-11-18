@@ -207,6 +207,7 @@ steps:
       displayName: DotNet Test
       inputs:
         targetType: inline
+        pwsh: true
         script: |
           # Sets test coverage default when not provided, defaults depends whether native MTP is configured with .NET 10 or not.
           # Use '--coverage' when using native MTP, '--collect "Code Coverage"' for MTP over VSTest
