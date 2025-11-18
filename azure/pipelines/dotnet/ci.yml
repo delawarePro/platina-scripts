@@ -252,18 +252,18 @@ steps:
           }
         workingDirectory: $(WorkingDirectory)
 
-    - task: PublishTestResults@2
-      displayName: 'Publish Test Results'
-      inputs:
-        testResultsFormat: 'VSTest'
-        testResultsFiles: '*.trx'
-        searchFolder: '$(Agent.TempDirectory)'
-      condition: succeededOrFailed()
+  - task: PublishTestResults@2
+    displayName: 'Publish Test Results'
+    inputs:
+      testResultsFormat: 'VSTest'
+      testResultsFiles: '*.trx'
+      searchFolder: '$(Agent.TempDirectory)'
+    condition: succeededOrFailed()
     
-    - task: PublishCodeCoverageResults@2
-      displayName: 'Publish Code Coverage Results'
-      inputs:
-        summaryFileLocation: $(Agent.TempDirectory)/**/*.coverage
+  - task: PublishCodeCoverageResults@2
+    displayName: 'Publish Code Coverage Results'
+    inputs:
+      summaryFileLocation: $(Agent.TempDirectory)/**/*.coverage
 
   - ${{ each step in parameters.AfterTestsSteps }}:
     - ${{ step }} 
