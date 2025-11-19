@@ -203,6 +203,8 @@ steps:
 
   - ${{ if eq(parameters.AzureSubscription, '') }}:
     # We don't use DotNetCoreCLI@2 for testing as it doesn't properly support nested solution folders in combination with MTP.
+    # Keep inline script in sync with 'DotNet Test (AzureCLI)' task below!
+    # We're not using an external .ps1 script as this would require a checkout step.
     - task: PowerShell@2
       displayName: DotNet Test
       inputs:
