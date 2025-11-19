@@ -217,7 +217,7 @@ steps:
           Resolve-Path ${{ parameters.TestProjectsGlob }} -ErrorAction SilentlyContinue | Get-Item | Foreach-Object {
             if ( $isMtp ) {
               # Change working directory because global.json is expected in the working directory by 'dotnet test'.
-              Set-Location -Path $_.Directory
+              Set-Location -Path $solutionDir
               $testCoverageArguments = ( "${{ parameters.TestCoverageArguments }}" -eq "" ) ? "--coverage" : "${{ parameters.TestCoverageArguments }}"
               &dotnet test --project "$_" --report-trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} $testCoverageArguments ${{ parameters.TestArguments }}
             }
@@ -243,7 +243,7 @@ steps:
           Resolve-Path ${{ parameters.TestProjectsGlob }} -ErrorAction SilentlyContinue | Get-Item | Foreach-Object {
             if ( $isMtp ) {
               # Change working directory because global.json is expected in the working directory by 'dotnet test'.
-              Set-Location -Path $_.Directory
+              Set-Location -Path $solutionDir
               $testCoverageArguments = ( "${{ parameters.TestCoverageArguments }}" -eq "" ) ? "--coverage" : "${{ parameters.TestCoverageArguments }}"
               &dotnet test --project "$_" --report-trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} $testCoverageArguments ${{ parameters.TestArguments }}
             }
