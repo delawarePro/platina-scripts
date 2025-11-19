@@ -36,8 +36,16 @@ inputs:
     description: "Whether not to run tests."
     required: false
     default: "false"
+  testProjectsGlob:
+   description: "Glob to match test projects."
+   required: false
+   default: "**/*[Tt]ests/*.csproj"
   testArguments:
     description: "Optional arguments to pass to test runner."
+    required: false
+    default: ""
+  testCoverageArguments:
+    description: "Test coverage arguments for collection."
     required: false
     default: ""
 
@@ -105,7 +113,7 @@ runs:
       shell: pwsh
       if: ${{ inputs.withPack == 'true' }}
       run: dotnet pack ${{ inputs.solution }} --configuration ${{ inputs.buildConfiguration }} ${{ inputs.postBuildDotnetArgs }} --property:PackageOutputPath=${{ runner.temp }}/nugets
-      # Explicitely pass parameters as environment variables for Platina packaging support.
+      # Explicitly pass parameters as environment variables for Platina packaging support.
       env:
         Prerelease: ${{ inputs.prerelease }}
         WithRelease: ${{ inputs.withRelease }}
@@ -115,7 +123,7 @@ runs:
       if: ${{ inputs.withPublish == 'true' }}
       run: |
         dotnet publish ${{ inputs.solution }} --configuration ${{ inputs.buildConfiguration }} ${{ inputs.postBuildDotnetArgs }} --property PublishDir=${{ runner.temp }}/packages
-      # Explicitely pass parameters as environment variables for Platina publish support.
+      # Explicitly pass parameters as environment variables for Platina publish support.
       env:
         Prerelease: ${{ inputs.prerelease }}
         WithRelease: ${{ inputs.withRelease }}
@@ -126,7 +134,27 @@ runs:
     - name: DotNet Test
       if: ${{ inputs.noTests != 'true'}}
       shell: pwsh
-      run: dotnet test ${{ inputs.solution }} --configuration ${{ inputs.buildConfiguration }} ${{ inputs.postBuildDotnetArgs }} ${{ inputs.testArguments }}
+      run: |
+          # Sets test coverage default when not provided, defaults depends whether native MTP is configured with .NET 10 or not.
+          # Use '--coverage' when using native MTP, '--collect "Code Coverage"' for MTP over VSTest
+          $solutionDir = (Get-Item "${{ inputs.solution }}").Directory
+          $isMtp = (Get-Content (Join-Path $solutionDir "global.json") -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json).test.runner -eq "Microsoft.Testing.Platform"
+
+          foreach($project in (Resolve-Path ${{ inputs.testProjectsGlob }} -ErrorAction SilentlyContinue | Get-Item))
+          {
+            if ( $isMtp )
+            {
+              # Change working directory because global.json is expected in the working directory by 'dotnet test'.
+              Set-Location -Path $solutionDir
+              $testCoverageArguments = ( "${{ inputs.testCoverageArguments }}" -eq "" ) ? "--coverage" : "${{ inputs.testCoverageArguments }}"
+              &dotnet test --project "$($project.FullName)" --report-trx --results-directory ${{ runner.temp }} --configuration ${{ inputs.buildConfiguration }} ${{ inputs.postBuildDotnetArgs }} $testCoverageArguments ${{ inputs.testArguments }}
+            }
+            else
+            {
+              $testCoverageArguments = ( "${{ inputs.testCoverageArguments }}" -eq "" ) ? @("--collect", "Code Coverage") : "${{ inputs.testCoverageArguments }}"
+              &dotnet test "$($project.FullName)" --logger trx --results-directory ${{ runner.temp }} --configuration ${{ inputs.buildConfiguration }} ${{ inputs.postBuildDotnetArgs }} $testCoverageArguments ${{ inputs.testArguments }}
+            }
+          }
 
     - name: Publish Test Results
       if: ${{ inputs.noTests != 'true' && always() }}
@@ -160,7 +188,7 @@ runs:
       # Therefore, also publish the .pdb to the SymbolServer of this organization.
       # Users can get rich debugging experience by adding the VSTS symbol server in Visual Studio.
     - name: Publish symbols to "local" symbol server too
-      if: ${{ inputs.withPack == 'true' && inputs.withRelease == 'true' && inputs.nuGetSymbolsAccountName != '' &&  inputs.nuGetSymbolsPAT != '' }}
+      if: ${{ inputs.withPack == 'true' && inputs.withRelease == 'true' && inputs.nuGetSymbolsAccountName != '' &&  inputs.nuGetSymbolsToken != '' }}
       uses: microsoft/action-publish-symbols@v2.1.6
       with:
         accountName: ${{ inputs.nuGetSymbolsAccountName }}

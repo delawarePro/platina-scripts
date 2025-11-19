@@ -2,7 +2,7 @@
 parameters:
 - name: Solution
   type: string
-  default: '*.sln'
+  default: '*.sln*' # Support both '.sln' and '.slnx'
   displayName: 'Optional solution to process, use this if you have multiple solutions.'
 
 - name: BuildConfiguration
@@ -32,7 +32,7 @@ parameters:
   displayName: 'Optional arguments to pass to test runner.'
 - name: TestCoverageArguments
   type: string
-  default: '--collect "Code Coverage"'
+  default: ''
   displayName: 'Test coverage arguments for collection.'
 - name: BeforeTestsSteps
   type: stepList
@@ -121,7 +121,7 @@ steps:
         nuget | "$(Agent.OS)"
       path: $(NUGET_PACKAGES)
     condition: ne(variables.NUGET_PACKAGES, '')
-  
+
 - task: DotNetCoreCLI@2
   displayName: 'DotNet Restore'
   inputs: 
@@ -173,11 +173,6 @@ steps:
       command: 'custom'
       custom: 'pack'
       projects: ${{ parameters.Solution }}
-      # Version .NET SDK 7.0.200 does not support output parameter on solution builds.
-      # See https://learn.microsoft.com/en-us/dotnet/core/compatibility/sdk/7.0/solution-level-output-no-longer-valid.
-      # Starting from SDK 7.0.201, this does not apply to 'dotnet pack' and has been degraded to a warning for other dotnet commands.
-      # As we really want to perform solution builds/publishes and as long we have build agents that runs on 7.0.200,
-      # we use the workaround to specify the 'PackageOutputPath' property.
       arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} --property:PackageOutputPath=$(Build.ArtifactStagingDirectory)/nugets'
 
 - ${{ if eq(parameters.WithPublish, 'true') }}:
@@ -186,11 +181,6 @@ steps:
     inputs:
       command: 'publish'
       projects: ${{ parameters.Solution }}
-      # Version .NET SDK 7.0.200 does not support output parameter on solution builds.
-      # See https://learn.microsoft.com/en-us/dotnet/core/compatibility/sdk/7.0/solution-level-output-no-longer-valid.
-      # Starting from SDK 7.0.201, this has been degraded to a warning for other dotnet commands.
-      # As we really want to perform solution builds/publishes and as long we have build agents that runs on 7.0.200,
-      # we use the workaround to specify the 'PublishDir' property.
       arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} --property PublishDir=$(Build.ArtifactStagingDirectory)/packages'
       publishWebProjects: false
       modifyOutputPath: false
@@ -198,7 +188,7 @@ steps:
 
 - ${{ if ne(parameters.NoTests, 'true') }}:
   - ${{ each step in parameters.BeforeTestsSteps }}:
-    - ${{ step }} 
+    - ${{ step }}
   - ${{ if and( eq(parameters.NoTests, false), ne(parameters.WithPlatinaTestInit, false) ) }}:
     - task: PowerShell@2
       displayName: 'Platina End Test Initialization'
@@ -212,13 +202,33 @@ steps:
           exit 0;
 
   - ${{ if eq(parameters.AzureSubscription, '') }}:
-    - task: DotNetCoreCLI@2
-      displayName: 'DotNet Test'
+    # We don't use DotNetCoreCLI@2 for testing as it doesn't properly support nested solution folders in combination with MTP.
+    # Keep inline script in sync with 'DotNet Test (AzureCLI)' task below!
+    # We're not using an external .ps1 script as this would require a checkout step.
+    - task: PowerShell@2
+      displayName: DotNet Test
       inputs:
-        command: 'test'
-        projects: ${{ parameters.TestProjectsGlob }}
-        arguments: '--configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestCoverageArguments}} ${{ parameters.TestArguments }}'
+        targetType: inline
+        pwsh: true
+        script: |
+          # Sets test coverage default when not provided, defaults depends whether native MTP is configured with .NET 10 or not.
+          # Use '--coverage' when using native MTP, '--collect "Code Coverage"' for MTP over VSTest
+          $solutionDir = (Get-Item "${{ parameters.Solution }}").Directory
+          $isMtp = (Get-Content (Join-Path $solutionDir "global.json") -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json).test.runner -eq "Microsoft.Testing.Platform"
 
+          Resolve-Path ${{ parameters.TestProjectsGlob }} -ErrorAction SilentlyContinue | Get-Item | Foreach-Object {
+            if ( $isMtp ) {
+              # Change working directory because global.json is expected in the working directory by 'dotnet test'.
+              Set-Location -Path $solutionDir
+              $testCoverageArguments = ( "${{ parameters.TestCoverageArguments }}" -eq "" ) ? "--coverage" : "${{ parameters.TestCoverageArguments }}"
+              &dotnet test --project "$_" --report-trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} $testCoverageArguments ${{ parameters.TestArguments }}
+            }
+            else {
+              $testCoverageArguments = ( "${{ parameters.TestCoverageArguments }}" -eq "" ) ? @("--collect", "Code Coverage") : "${{ parameters.TestCoverageArguments }}"
+              &dotnet test "$_" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} $testCoverageArguments ${{ parameters.TestArguments }}
+            }
+          }
+        
   - ${{ else }}:
     - task: AzureCLI@2
       displayName: 'DotNet Test (AzureCLI)'
@@ -227,22 +237,36 @@ steps:
         scriptType: 'pscore'
         scriptLocation: 'inlineScript'
         inlineScript: |
-          Get-ChildItem -Filter ${{ parameters.Solution }} | Foreach-Object {
-            &dotnet test "$($_.FullName)" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.TestCoverageArguments}} ${{ parameters.PostBuildDotnetArgs }} ${{ parameters.TestArguments }}
+          # Sets test coverage default when not provided, defaults depends whether native MTP is configured with .NET 10 or not.
+          # Use '--coverage' when using native MTP, '--collect "Code Coverage"' for MTP over VSTest.
+          $solutionDir = (Get-Item "${{ parameters.Solution }}").Directory
+          $isMtp = (Get-Content (Join-Path $solutionDir "global.json") -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json).test.runner -eq "Microsoft.Testing.Platform"
+
+          Resolve-Path ${{ parameters.TestProjectsGlob }} -ErrorAction SilentlyContinue | Get-Item | Foreach-Object {
+            if ( $isMtp ) {
+              # Change working directory because global.json is expected in the working directory by 'dotnet test'.
+              Set-Location -Path $solutionDir
+              $testCoverageArguments = ( "${{ parameters.TestCoverageArguments }}" -eq "" ) ? "--coverage" : "${{ parameters.TestCoverageArguments }}"
+              &dotnet test --project "$_" --report-trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} $testCoverageArguments ${{ parameters.TestArguments }}
+            }
+            else {
+              $testCoverageArguments = ( "${{ parameters.TestCoverageArguments }}" -eq "" ) ? @("--collect", "Code Coverage") : "${{ parameters.TestCoverageArguments }}"
+              &dotnet test "$_" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} $testCoverageArguments ${{ parameters.TestArguments }}
+            }
           }
 
-    - task: PublishTestResults@2
-      displayName: 'Publish Test Results'
-      inputs:
-        testResultsFormat: 'VSTest'
-        testResultsFiles: '*.trx'
-        searchFolder: '$(Agent.TempDirectory)'
-      condition: succeededOrFailed()
+  - task: PublishTestResults@2
+    displayName: 'Publish Test Results'
+    inputs:
+      testResultsFormat: 'VSTest'
+      testResultsFiles: '*.trx'
+      searchFolder: '$(Agent.TempDirectory)'
+    condition: succeededOrFailed()
     
-    - task: PublishCodeCoverageResults@2
-      displayName: 'Publish Code Coverage Results'
-      inputs:
-        summaryFileLocation: $(Agent.TempDirectory)/**/*.coverage
+  - task: PublishCodeCoverageResults@2
+    displayName: 'Publish Code Coverage Results'
+    inputs:
+      summaryFileLocation: $(Agent.TempDirectory)/**/*.coverage
 
   - ${{ each step in parameters.AfterTestsSteps }}:
     - ${{ step }} 
