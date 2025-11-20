@@ -213,7 +213,7 @@ steps:
         script: |
           # Sets test coverage default when not provided, defaults depends whether native MTP is configured with .NET 10 or not.
           # Use '--coverage' when using native MTP, '--collect "Code Coverage"' for MTP over VSTest
-          $solutionDir = (Get-Item "${{ parameters.Solution }}").Directory
+          $solutionDir = (Get-Item "${{ parameters.Solution }}" | Select-Object -First 1).Directory
           $isMtp = (Get-Content (Join-Path $solutionDir "global.json") -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json).test.runner -eq "Microsoft.Testing.Platform"
 
           Resolve-Path ${{ parameters.TestProjectsGlob }} -ErrorAction SilentlyContinue | Get-Item | Foreach-Object {
@@ -239,7 +239,7 @@ steps:
         inlineScript: |
           # Sets test coverage default when not provided, defaults depends whether native MTP is configured with .NET 10 or not.
           # Use '--coverage' when using native MTP, '--collect "Code Coverage"' for MTP over VSTest.
-          $solutionDir = (Get-Item "${{ parameters.Solution }}").Directory
+          $solutionDir = (Get-Item "${{ parameters.Solution }}" | Select-Object -First 1).Directory
           $isMtp = (Get-Content (Join-Path $solutionDir "global.json") -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json).test.runner -eq "Microsoft.Testing.Platform"
 
           Resolve-Path ${{ parameters.TestProjectsGlob }} -ErrorAction SilentlyContinue | Get-Item | Foreach-Object {
