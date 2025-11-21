@@ -137,7 +137,7 @@ runs:
       run: |
           # Sets test coverage default when not provided, defaults depends whether native MTP is configured with .NET 10 or not.
           # Use '--coverage' when using native MTP, '--collect "Code Coverage"' for MTP over VSTest
-          $solutionDir = (Get-Item "${{ inputs.solution}}" | Select-Object -First 1).Directory
+          $solutionDir = (Get-Item "${{ inputs.solution }}" | Select-Object -First 1).Directory
           $isMtp = (Get-Content (Join-Path $solutionDir "global.json") -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json).test.runner -eq "Microsoft.Testing.Platform"
 
           foreach($project in (Resolve-Path ${{ inputs.testProjectsGlob }} -ErrorAction SilentlyContinue | Get-Item))
