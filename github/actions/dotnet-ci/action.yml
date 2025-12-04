@@ -11,7 +11,7 @@ inputs:
   solution:
     description: "Optional solution to process, use this if you have multiple solutions or when running on a Windows runner."
     required: false
-    default: "" # Default only supported for Linux runners. Linux interprets wildcards and expands them before it is sent to a command.
+    default: ""
 
   dotNetSdkVersion:
     description: "Specific .NET SDK version to use."
@@ -94,8 +94,11 @@ runs:
         dotnet-version: ${{ inputs.dotNetSdkVersion }}
       env:
         NUGET_AUTH_TOKEN: ${{ inputs.nuGetAuthToken }}
-
-    # Support for '.sln' & '.slnx' files. Resolve solution file to use for 'dotnet' commands.
+    
+    # Support for '.sln' & '.slnx' files. Resolve solution file and output as variable. So this can be used for subsequent 'dotnet' commands.
+    # Prefer '.slnx' over '.sln' when both are present.
+    # Default only supported for Linux runners. Linux interprets wildcards and expands them before it is sent to a command.
+    # When running on Windows, perhaps better to specify the solution file explicitly, for now.
     - name: Set 'SolutionFile' variable
       id: "variables"
       shell: pwsh

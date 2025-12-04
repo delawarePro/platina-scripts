@@ -136,7 +136,8 @@ steps:
 
 # 'Solution' parameter default is a glob pattern that is supported by DotNetCoreCLI task.
 # Glob patterns are not supported natively in PowerShell.
-# So resolve the solution file if default is used. Prefer '.slnx' over '.sln' if both are present.
+# So resolve the solution file if default is used and output as variable. So this can be used for test steps.
+# Prefer '.slnx' over '.sln' if both are present.
 - ${{ if ne(parameters.NoTests, 'true') }}:
   - task: PowerShell@2
     displayName: Set 'SolutionFile' variable
