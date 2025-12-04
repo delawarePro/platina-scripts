@@ -94,15 +94,15 @@ runs:
         dotnet-version: ${{ inputs.dotNetSdkVersion }}
       env:
         NUGET_AUTH_TOKEN: ${{ inputs.nuGetAuthToken }}
-    
-    # Set variables.
-    #  - solutionFile: Support for '.sln' & '.slnx' files. Resolve solution file to use for 'dotnet' commands.
-    - name: Set variables
+
+    # Support for '.sln' & '.slnx' files. Resolve solution file to use for 'dotnet' commands.
+    - name: Set 'SolutionFile' variable
       id: "variables"
       shell: pwsh
       run: |
         $solutionFile = ("${{ inputs.solution }}" -eq "") ? (Test-Path "*.slnx") ? "*.slnx" : (Test-Path "*.sln") ? "*.sln" : "${{ inputs.solution }}" : "${{ inputs.solution }}"
-        echo "solutionFile=$solutionFile" >> "$GITHUB_OUTPUT"
+        Write-Host "Using solution file '$solutionFile'."
+        "solutionFile=$solutionFile" >> $env:GITHUB_OUTPUT
 
     - name: DotNet Restore
       shell: pwsh
