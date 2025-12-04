@@ -101,7 +101,7 @@ runs:
       id: "variables"
       shell: pwsh
       run: |
-        $solutionFile = (${{ inputs.solution }} -eq "") ? (Test-Path "*.slnx") ? "*.slnx" : (Test-Path "*.sln") ? "*.sln" : ${{ inputs.solution }} : ${{ inputs.solution }}
+        $solutionFile = (${{ inputs.solution }} -eq "") ? (Test-Path "*.slnx") ? "*.slnx" : (Test-Path "*.sln") ? "*.sln" : "${{ inputs.solution }}" : "${{ inputs.solution }}"
         echo "solutionFile=$solutionFile" >> "$GITHUB_OUTPUT"
 
     - name: DotNet Restore
