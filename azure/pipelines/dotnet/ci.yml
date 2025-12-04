@@ -144,10 +144,10 @@ steps:
       targetType: inline
       pwsh: true
       script: |
-        $isDefaultSolution = ${{ parameters.Solution }} -eq "*.sln?(x)" ? $True : $False
+        $isDefaultSolution = "${{ parameters.Solution }}" -eq "*.sln?(x)" ? $True : $False
         Write-Host "Is default solution: $isDefaultSolution => ${{ parameters.Solution }}"
 
-        $solutionFile = (${{ parameters.Solution }} -eq "*.sln?(x)") ? (Test-Path "*.slnx") ? "*.slnx" : (Test-Path "*.sln") ? "*.sln" : "${{ parameters.Solution }}" : "${{ parameters.Solution }}"
+        $solutionFile = ("${{ parameters.Solution }}" -eq "*.sln?(x)") ? (Test-Path "*.slnx") ? "*.slnx" : (Test-Path "*.sln") ? "*.sln" : "${{ parameters.Solution }}" : "${{ parameters.Solution }}"
         Write-Host "Using solution file '$solutionFile'."
         Write-Host "##vso[task.setvariable variable=SolutionFile]$solutionFile"
 
