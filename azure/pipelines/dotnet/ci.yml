@@ -145,6 +145,7 @@ steps:
       pwsh: true
       script: |
         $solutionFile = ($parameters.Solution -eq "*.sln?(x)") ? (Test-Path "*.slnx") ? "*.slnx" : (Test-Path "*.sln") ? "*.sln" : $parameters.Solution : $parameters.Solution
+        Write-Host "Using solution file '$solutionFile'."
         Write-Host "##vso[task.setvariable variable=SolutionFile]$solutionFile"
 
 - ${{ if and( ne(parameters.NoTests, true), ne(parameters.WithPlatinaTestInit, false) ) }}:
