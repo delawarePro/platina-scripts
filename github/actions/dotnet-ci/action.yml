@@ -11,7 +11,7 @@ inputs:
   solution:
     description: "Optional solution to process, use this if you have multiple solutions or when running on a Windows runner."
     required: false
-    default: "*.sln" # Default only supported for Linux runners. Linux interprets wildcards and expands them before it is sent to a command.
+    default: ""
 
   dotNetSdkVersion:
     description: "Specific .NET SDK version to use."
@@ -94,10 +94,22 @@ runs:
         dotnet-version: ${{ inputs.dotNetSdkVersion }}
       env:
         NUGET_AUTH_TOKEN: ${{ inputs.nuGetAuthToken }}
+    
+    # Support for '.sln' & '.slnx' files. Resolve solution file and output as variable. So this can be used for subsequent 'dotnet' commands.
+    # Prefer '.slnx' over '.sln' when both are present.
+    # Default only supported for Linux runners. Linux interprets wildcards and expands them before it is sent to a command.
+    # When running on Windows, perhaps better to specify the solution file explicitly, for now.
+    - name: Set 'SolutionFile' variable
+      id: "variables"
+      shell: pwsh
+      run: |
+        $solutionFile = ("${{ inputs.solution }}" -eq "") ? (Test-Path "*.slnx") ? "*.slnx" : (Test-Path "*.sln") ? "*.sln" : "${{ inputs.solution }}" : "${{ inputs.solution }}"
+        Write-Host "Using solution file '$solutionFile'."
+        "solutionFile=$solutionFile" >> $env:GITHUB_OUTPUT
 
     - name: DotNet Restore
       shell: pwsh
-      run: dotnet restore ${{ inputs.solution }}
+      run: dotnet restore ${{ steps.variables.outputs.solutionFile }}
 
     # DotNet restore doesn't restore tools in ./config/dotnet-tools.json, although documentation seems to indicate otherwise.
     # https://learn.microsoft.com/en-us/dotnet/core/tools/global-tools
@@ -107,12 +119,12 @@ runs:
 
     - name: DotNet Build
       shell: pwsh
-      run: dotnet build ${{ inputs.solution }} --configuration ${{ inputs.buildConfiguration }} /p:Platform="${{ inputs.buildPlatform}}" --no-restore
+      run: dotnet build ${{ steps.variables.outputs.solutionFile }} --configuration ${{ inputs.buildConfiguration }} /p:Platform="${{ inputs.buildPlatform}}" --no-restore
 
     - name: DotNet Pack
       shell: pwsh
       if: ${{ inputs.withPack == 'true' }}
-      run: dotnet pack ${{ inputs.solution }} --configuration ${{ inputs.buildConfiguration }} ${{ inputs.postBuildDotnetArgs }} --property:PackageOutputPath=${{ runner.temp }}/nugets
+      run: dotnet pack ${{ steps.variables.outputs.solutionFile }} --configuration ${{ inputs.buildConfiguration }} ${{ inputs.postBuildDotnetArgs }} --property:PackageOutputPath=${{ runner.temp }}/nugets
       # Explicitly pass parameters as environment variables for Platina packaging support.
       env:
         Prerelease: ${{ inputs.prerelease }}
@@ -122,7 +134,7 @@ runs:
       shell: pwsh
       if: ${{ inputs.withPublish == 'true' }}
       run: |
-        dotnet publish ${{ inputs.solution }} --configuration ${{ inputs.buildConfiguration }} ${{ inputs.postBuildDotnetArgs }} --property PublishDir=${{ runner.temp }}/packages
+        dotnet publish ${{ steps.variables.outputs.solutionFile }} --configuration ${{ inputs.buildConfiguration }} ${{ inputs.postBuildDotnetArgs }} --property PublishDir=${{ runner.temp }}/packages
       # Explicitly pass parameters as environment variables for Platina publish support.
       env:
         Prerelease: ${{ inputs.prerelease }}
@@ -137,7 +149,7 @@ runs:
       run: |
           # Sets test coverage default when not provided, defaults depends whether native MTP is configured with .NET 10 or not.
           # Use '--coverage' when using native MTP, '--collect "Code Coverage"' for MTP over VSTest
-          $solutionDir = (Get-Item "${{ inputs.solution }}").Directory
+          $solutionDir = (Get-Item "${{ steps.variables.outputs.solutionFile }}").Directory
           $isMtp = (Get-Content (Join-Path $solutionDir "global.json") -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json).test.runner -eq "Microsoft.Testing.Platform"
 
           foreach($project in (Resolve-Path ${{ inputs.testProjectsGlob }} -ErrorAction SilentlyContinue | Get-Item))

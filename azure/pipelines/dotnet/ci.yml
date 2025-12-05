@@ -2,7 +2,7 @@
 parameters:
 - name: Solution
   type: string
-  default: '*.sln*' # Support both '.sln' and '.slnx'
+  default: '*.sln?(x)' # Support both '.sln' and '.slnx'
   displayName: 'Optional solution to process, use this if you have multiple solutions.'
 
 - name: BuildConfiguration
@@ -134,13 +134,28 @@ steps:
       externalFeedCredentials: ${{ parameters.ExternalFeedCredentials }}
       restoreArguments: --locked-mode
 
+# 'Solution' parameter default is a glob pattern that is supported by DotNetCoreCLI task.
+# Glob patterns are not supported natively in PowerShell.
+# So resolve the solution file if default is used and output as variable. So this can be used for test steps.
+# Prefer '.slnx' over '.sln' if both are present.
+- ${{ if ne(parameters.NoTests, 'true') }}:
+  - task: PowerShell@2
+    displayName: Set 'SolutionFile' variable
+    inputs:
+      targetType: inline
+      pwsh: true
+      script: |
+        $solutionFile = ("${{ parameters.Solution }}" -eq "*.sln?(x)") ? (Test-Path "*.slnx") ? "*.slnx" : (Test-Path "*.sln") ? "*.sln" : "${{ parameters.Solution }}" : "${{ parameters.Solution }}"
+        Write-Host "Using solution file '$solutionFile'."
+        Write-Host "##vso[task.setvariable variable=SolutionFile]$solutionFile"
+
 - ${{ if and( ne(parameters.NoTests, true), ne(parameters.WithPlatinaTestInit, false) ) }}:
   - task: PowerShell@2
     displayName: 'Platina Begin Test Initialization'
     inputs:
       targetType: 'inline'
       script: |
-        Get-ChildItem -Filter ${{ parameters.Solution }} | Foreach-Object {
+        Get-ChildItem -Filter $(SolutionFile) | Foreach-Object {
           dotnet msbuild /target:BeginPlatinaTestInit "$($_.FullName)"
         }
         # Ignore msbuild errors because targets might not be present in projects.
@@ -195,7 +210,7 @@ steps:
       inputs:
         targetType: 'inline'
         script: |
-          Get-ChildItem -Filter ${{ parameters.Solution }} | Foreach-Object {
+          Get-ChildItem -Filter $(SolutionFile) | Foreach-Object {
             dotnet msbuild /target:EndPlatinaTestInit "$($_.FullName)"
           }
           # Ignore msbuild errors because targets might not be present in projects.
@@ -213,7 +228,7 @@ steps:
         script: |
           # Sets test coverage default when not provided, defaults depends whether native MTP is configured with .NET 10 or not.
           # Use '--coverage' when using native MTP, '--collect "Code Coverage"' for MTP over VSTest
-          $solutionDir = (Get-Item "${{ parameters.Solution }}").Directory
+          $solutionDir = (Get-Item $(SolutionFile) | Select-Object -First 1).Directory
           $isMtp = (Get-Content (Join-Path $solutionDir "global.json") -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json).test.runner -eq "Microsoft.Testing.Platform"
 
           Resolve-Path ${{ parameters.TestProjectsGlob }} -ErrorAction SilentlyContinue | Get-Item | Foreach-Object {
@@ -239,7 +254,7 @@ steps:
         inlineScript: |
           # Sets test coverage default when not provided, defaults depends whether native MTP is configured with .NET 10 or not.
           # Use '--coverage' when using native MTP, '--collect "Code Coverage"' for MTP over VSTest.
-          $solutionDir = (Get-Item "${{ parameters.Solution }}").Directory
+          $solutionDir = (Get-Item $(SolutionFile) | Select-Object -First 1).Directory
           $isMtp = (Get-Content (Join-Path $solutionDir "global.json") -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json).test.runner -eq "Microsoft.Testing.Platform"
 
           Resolve-Path ${{ parameters.TestProjectsGlob }} -ErrorAction SilentlyContinue | Get-Item | Foreach-Object {
