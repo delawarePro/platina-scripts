@@ -230,6 +230,7 @@ steps:
           # Use '--coverage' when using native MTP, '--collect "Code Coverage"' for MTP over VSTest
           $solutionDir = (Get-Item $(SolutionFile) | Select-Object -First 1).Directory
           $isMtp = (Get-Content (Join-Path $solutionDir "global.json") -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json).test.runner -eq "Microsoft.Testing.Platform"
+          $exitCode = 0
 
           Resolve-Path ${{ parameters.TestProjectsGlob }} -ErrorAction SilentlyContinue | Get-Item | Foreach-Object {
             if ( $isMtp ) {
@@ -242,7 +243,13 @@ steps:
               $testCoverageArguments = ( "${{ parameters.TestCoverageArguments }}" -eq "" ) ? @("--collect", "Code Coverage") : "${{ parameters.TestCoverageArguments }}"
               &dotnet test "$_" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} $testCoverageArguments ${{ parameters.TestArguments }}
             }
+
+            if ( $LASTEXITCODE -gt $exitCode ) {
+              $exitCode = $LASTEXITCODE
+            }
           }
+
+          exit $exitCode
         
   - ${{ else }}:
     - task: AzureCLI@2
@@ -256,6 +263,7 @@ steps:
           # Use '--coverage' when using native MTP, '--collect "Code Coverage"' for MTP over VSTest.
           $solutionDir = (Get-Item $(SolutionFile) | Select-Object -First 1).Directory
           $isMtp = (Get-Content (Join-Path $solutionDir "global.json") -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json).test.runner -eq "Microsoft.Testing.Platform"
+          $exitCode = 0
 
           Resolve-Path ${{ parameters.TestProjectsGlob }} -ErrorAction SilentlyContinue | Get-Item | Foreach-Object {
             if ( $isMtp ) {
@@ -268,7 +276,13 @@ steps:
               $testCoverageArguments = ( "${{ parameters.TestCoverageArguments }}" -eq "" ) ? @("--collect", "Code Coverage") : "${{ parameters.TestCoverageArguments }}"
               &dotnet test "$_" --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.BuildConfiguration }} ${{ parameters.PostBuildDotnetArgs }} $testCoverageArguments ${{ parameters.TestArguments }}
             }
+
+            if ( $LASTEXITCODE -gt $exitCode ) {
+              $exitCode = $LASTEXITCODE
+            }
           }
+
+          exit $exitCode
 
   - task: PublishTestResults@2
     displayName: 'Publish Test Results'

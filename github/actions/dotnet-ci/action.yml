@@ -151,6 +151,7 @@ runs:
           # Use '--coverage' when using native MTP, '--collect "Code Coverage"' for MTP over VSTest
           $solutionDir = (Get-Item "${{ steps.variables.outputs.solutionFile }}").Directory
           $isMtp = (Get-Content (Join-Path $solutionDir "global.json") -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json).test.runner -eq "Microsoft.Testing.Platform"
+          $exitCode = 0
 
           foreach($project in (Resolve-Path ${{ inputs.testProjectsGlob }} -ErrorAction SilentlyContinue | Get-Item))
           {
@@ -166,7 +167,13 @@ runs:
               $testCoverageArguments = ( "${{ inputs.testCoverageArguments }}" -eq "" ) ? @("--collect", "Code Coverage") : "${{ inputs.testCoverageArguments }}"
               &dotnet test "$($project.FullName)" --logger trx --results-directory ${{ runner.temp }} --configuration ${{ inputs.buildConfiguration }} ${{ inputs.postBuildDotnetArgs }} $testCoverageArguments ${{ inputs.testArguments }}
             }
+
+            if ( $LASTEXITCODE -gt $exitCode ) {
+              $exitCode = $LASTEXITCODE
+            }
           }
+          
+          exit $exitCode
 
     - name: Publish Test Results
       if: ${{ inputs.noTests != 'true' && always() }}
