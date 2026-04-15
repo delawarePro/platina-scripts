@@ -292,7 +292,7 @@ steps:
           exit $exitCode
         env:
           ${{ each pair in parameters.TestEnvironmentVariables }}:
-              ${{ pair.key }}: ${{ pair.value }}
+            ${{ pair.key }}: ${{ pair.value }}
 
   - task: PublishTestResults@2
     displayName: 'Publish Test Results'
