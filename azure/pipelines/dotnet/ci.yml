@@ -30,6 +30,10 @@ parameters:
   type: string
   default: ''
   displayName: 'Optional arguments to pass to test runner.'
+- name: TestEnvironmentVariables
+  type: object
+  default: {}
+  displayName: 'Optional environment variables to set during test execution.'
 - name: TestCoverageArguments
   type: string
   default: ''
@@ -250,6 +254,9 @@ steps:
           }
 
           exit $exitCode
+        env:
+          ${{ each pair in parameters.TestEnvironmentVariables }}:
+            ${{ pair.key }}: ${{ pair.value }}
         
   - ${{ else }}:
     - task: AzureCLI@2
@@ -283,6 +290,9 @@ steps:
           }
 
           exit $exitCode
+        env:
+          ${{ each pair in parameters.TestEnvironmentVariables }}:
+              ${{ pair.key }}: ${{ pair.value }}
 
   - task: PublishTestResults@2
     displayName: 'Publish Test Results'
