@@ -255,8 +255,7 @@ steps:
 
           exit $exitCode
         env:
-          ${{ each pair in parameters.TestEnvironmentVariables }}:
-            ${{ pair.key }}: ${{ pair.value }}
+          ${{ insert }}: ${{ parameters.TestEnvironmentVariables }}
         
   - ${{ else }}:
     - task: AzureCLI@2
@@ -291,8 +290,7 @@ steps:
 
           exit $exitCode
         env:
-          ${{ each pair in parameters.TestEnvironmentVariables }}:
-            ${{ pair.key }}: ${{ pair.value }}
+          ${{ insert }}: ${{ parameters.TestEnvironmentVariables }}
 
   - task: PublishTestResults@2
     displayName: 'Publish Test Results'
