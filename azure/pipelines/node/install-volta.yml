@@ -38,9 +38,12 @@ steps:
       Start-Process $(Agent.ToolsDirectory)\${voltaFileName} -ArgumentList "/quiet" -Wait
 
       Write-Host "Updating PATH..."
-      $env:PATH = "C:\Program Files\Volta\;$env:PATH"
-      Write-Host "##vso[task.setvariable variable=PATH]C:\Program Files\Volta\;$env:PATH"
+      $voltaShimDir = "$env:LOCALAPPDATA\Volta\bin"
+      $env:PATH = "$voltaShimDir;C:\Program Files\Volta\;$env:PATH"
+      Write-Host "##vso[task.setvariable variable=PATH]$voltaShimDir;C:\Program Files\Volta\;$env:PATH"
 
+      Write-Host "Running volta setup..."
+      volta setup --verbose
       Write-Host $env:PATH
     condition: eq( variables['Agent.OS'], 'Windows_NT' )
     displayName: Install Volta for Windows
