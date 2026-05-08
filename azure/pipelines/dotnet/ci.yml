@@ -83,7 +83,7 @@ parameters:
 - name: ExternalFeedCredentials
   type: string
   default: ''
-  displayName: 'Names of external NuGet feed links. '
+  displayName: 'Names of external NuGet feed links. Not needed when ExternalFeedUrl and AzureDevOpsConnection are used.'
 - name: WithNuGetCache
   type: boolean
   default: false
