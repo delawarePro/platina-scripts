@@ -95,6 +95,19 @@ inputs:
     required: false
     default: ""
 
+  containerRegistry:
+    description: "Optional container registry login server to push containers to."
+    required: false
+    default: ""
+  containerRegistryUsername:
+    description: "Optional container registry username for authentication."
+    required: false
+    default: ""
+  containerRegistryPassword:
+    description: "Optional container registry password for authentication."
+    required: false
+    default: ""
+
 runs:
   using: composite
   steps:
@@ -250,6 +263,37 @@ runs:
         # Remark: the PAT token requires more access than just Azure Artifacts
         # See: https://github.com/marketplace/actions/publish-symbols
         personalAccessToken: ${{ inputs.nuGetSymbolsToken }}
+
+    - name: Docker login
+      if: ${{ inputs.containerRegistry != '' && inputs.containerRegistryUsername != '' }}
+      uses: docker/login-action@v4
+      with:
+        registry: ${{ inputs.containerRegistry }}
+        username: ${{ inputs.containerRegistryUsername }}
+        password: ${{ inputs.containerRegistryPassword }}
+
+    # - name: Docker push
+    #   if: ${{ inputs.containerRegistry != '' && inputs.containerRegistryUsername != '' }}
+    #   uses: docker/build-push-action@v7
+
+    # - name: DotNet Build
+    #   shell: bash
+    #   run: |
+    #     REGISTRY="${{ inputs.ContainerRegistryUrl }}"
+    #     echo "Using registry $REGISTRY"
+
+    #     find ${{ inputs.PackageOutputPath }} -name "container.json" | while read file; do
+    #       CONTAINER_REPO=$(jq -r '.repository' "$file")
+    #       CONTAINER_VERSION=$(jq -r '.version' "$file")
+    #       TAG="$REGISTRY/$CONTAINER_REPO:$CONTAINER_VERSION"
+
+    #       echo "Pushing $TAG"
+    #       docker tag "$CONTAINER_REPO:$CONTAINER_VERSION" "$TAG"
+    #       docker push "$TAG"
+
+    #       # Add registry field to container.json
+    #       jq --arg registry "$REGISTRY" '. + {registry: $registry}' "$file" > tmp.json && mv tmp.json "$file"
+    #     done
 
     - name: Add publish output to pipeline artifacts
       if: ${{ inputs.withPublish == 'true' && inputs.withRelease == 'true' }}
