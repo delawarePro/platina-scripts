@@ -1,4 +1,3 @@
-# Not yet implemented: Docker login & push support.
 # OOTB features in Azure DevOps but not in GitHub:
 #  - UI for test & code coverage results.
 #  - Azure Artifacts feeds requires PAT tokens.
@@ -265,35 +264,33 @@ runs:
         personalAccessToken: ${{ inputs.nuGetSymbolsToken }}
 
     - name: Docker login
-      if: ${{ inputs.containerRegistry != '' && inputs.containerRegistryUsername != '' }}
+      if: ${{ inputs.withPublish == 'true' && inputs.withRelease == 'true' && inputs.containerRegistry != '' && inputs.containerRegistryUsername != '' }}
       uses: docker/login-action@v4
       with:
         registry: ${{ inputs.containerRegistry }}
         username: ${{ inputs.containerRegistryUsername }}
         password: ${{ inputs.containerRegistryPassword }}
 
-    # - name: Docker push
-    #   if: ${{ inputs.containerRegistry != '' && inputs.containerRegistryUsername != '' }}
-    #   uses: docker/build-push-action@v7
+    - name: Docker push
+      if: ${{ inputs.withPublish == 'true' && inputs.withRelease == 'true' && inputs.containerRegistry != '' && inputs.containerRegistryUsername != '' }}
+      shell: pwsh
+      run: |
+        $registry = "${{ inputs.containerRegistry }}"
+        Write-Host "Using registry $registry"
 
-    # - name: DotNet Build
-    #   shell: bash
-    #   run: |
-    #     REGISTRY="${{ inputs.ContainerRegistryUrl }}"
-    #     echo "Using registry $REGISTRY"
+        Get-ChildItem "${{ runner.temp }}/packages" -Recurse -Filter container.json |
+          ForEach-Object {
+            $container = Get-Content $_.FullName | ConvertFrom-Json
+            $tag = "$registry/$($container.repository):$($container.version)"
 
-    #     find ${{ inputs.PackageOutputPath }} -name "container.json" | while read file; do
-    #       CONTAINER_REPO=$(jq -r '.repository' "$file")
-    #       CONTAINER_VERSION=$(jq -r '.version' "$file")
-    #       TAG="$REGISTRY/$CONTAINER_REPO:$CONTAINER_VERSION"
+            Write-Host "Pushing $tag"
+            &docker tag "$($container.repository):$($container.version)" "$tag"
+            &docker push "$tag"
 
-    #       echo "Pushing $TAG"
-    #       docker tag "$CONTAINER_REPO:$CONTAINER_VERSION" "$TAG"
-    #       docker push "$TAG"
-
-    #       # Add registry field to container.json
-    #       jq --arg registry "$REGISTRY" '. + {registry: $registry}' "$file" > tmp.json && mv tmp.json "$file"
-    #     done
+            # Add registry to container.json
+            $container | Add-Member -MemberType NoteProperty -Name registry -Value $registry -Force
+            $container | ConvertTo-Json | Out-File -FilePath $_.FullName -Force
+          }
 
     - name: Add publish output to pipeline artifacts
       if: ${{ inputs.withPublish == 'true' && inputs.withRelease == 'true' }}
