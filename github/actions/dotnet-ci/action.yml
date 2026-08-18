@@ -98,12 +98,20 @@ inputs:
     description: "Optional container registry login server to push containers to."
     required: false
     default: ""
-  containerRegistryUsername:
-    description: "Optional container registry username for authentication."
+  # containerRegistryUsername:
+  #   description: "Optional container registry username for authentication."
+  #   required: false
+  #   default: ""
+  # containerRegistryPassword:
+  #   description: "Optional container registry password for authentication."
+  #   required: false
+  #   default: ""
+  containerRegistryAzureClientId:
+    description: "Optional Azure Client ID for authenticating with Azure Container Registry."
     required: false
     default: ""
-  containerRegistryPassword:
-    description: "Optional container registry password for authentication."
+  containerRegistryAzureTenantId:
+    description: "Optional Azure Tenant ID for authenticating with Azure Container Registry."
     required: false
     default: ""
 
@@ -111,9 +119,9 @@ runs:
   using: composite
   steps:
     # Login in Azure CLI context provided with a service principal.
-    - uses: azure/login@v1
+    - uses: azure/login@v3
       if: ${{ inputs.azureClientId != '' && inputs.azureTenantId != '' }}
-      name: Azure CLI Login
+      name: Azure CLI Login (Azure Artifacts)
       with:
         client-id: ${{ inputs.azureClientId }}
         tenant-id: ${{ inputs.azureTenantId }}
@@ -263,16 +271,35 @@ runs:
         # See: https://github.com/marketplace/actions/publish-symbols
         personalAccessToken: ${{ inputs.nuGetSymbolsToken }}
 
+      # Login in Azure CLI use use token as password for Docker login.
+      # See: https://github.com/docker/login-action#openid-connect-oidc
+    - uses: azure/login@v3
+      if: ${{ inputs.withPublish == 'true' && inputs.withRelease == 'true' && inputs.containerRegistry != '' && inputs.containerRegistryAzureClientId != '' && inputs.containerRegistryAzureTenantId != '' }}
+      name: Azure CLI Login
+      with:
+        client-id: ${{ inputs.containerRegistryAzureClientId }}
+        tenant-id: ${{ inputs.containerRegistryAzureTenantId }}
+        allow-no-subscriptions: true
+
+    - name: Get ACR access token
+      if: ${{ inputs.withPublish == 'true' && inputs.withRelease == 'true' && inputs.containerRegistry != '' && inputs.containerRegistryAzureClientId != '' && inputs.containerRegistryAzureTenantId != '' }}
+      id: acr-token
+      shell: bash
+      run: |
+        ACR_TOKEN=$(az acr login --name ${{ inputs.containerRegistry }} --expose-token --output tsv --query accessToken)
+        echo "::add-mask::$ACR_TOKEN" # mask the token in workflow logs
+        echo "token=$ACR_TOKEN" >> "$GITHUB_OUTPUT"
+
     - name: Docker login
-      if: ${{ inputs.withPublish == 'true' && inputs.withRelease == 'true' && inputs.containerRegistry != '' && inputs.containerRegistryUsername != '' }}
+      if: ${{ inputs.withPublish == 'true' && inputs.withRelease == 'true' && inputs.containerRegistry != '' && inputs.containerRegistryAzureClientId != '' && inputs.containerRegistryAzureTenantId != '' }}
       uses: docker/login-action@v4
       with:
         registry: ${{ inputs.containerRegistry }}
-        username: ${{ inputs.containerRegistryUsername }}
-        password: ${{ inputs.containerRegistryPassword }}
+        username: 00000000-0000-0000-0000-000000000000
+        password: ${{ steps.acr-token.outputs.token }}
 
     - name: Docker push
-      if: ${{ inputs.withPublish == 'true' && inputs.withRelease == 'true' && inputs.containerRegistry != '' && inputs.containerRegistryUsername != '' }}
+      if: ${{ inputs.withPublish == 'true' && inputs.withRelease == 'true' && inputs.containerRegistry != '' && inputs.containerRegistryAzureClientId != '' && inputs.containerRegistryAzureTenantId != '' }}
       shell: pwsh
       run: |
         $registry = "${{ inputs.containerRegistry }}"
