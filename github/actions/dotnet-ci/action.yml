@@ -275,7 +275,7 @@ runs:
       # See: https://github.com/docker/login-action#openid-connect-oidc
     - uses: azure/login@v3
       if: ${{ inputs.withPublish == 'true' && inputs.withRelease == 'true' && inputs.containerRegistry != '' && inputs.containerRegistryAzureClientId != '' && inputs.containerRegistryAzureTenantId != '' }}
-      name: Azure CLI Login
+      name: Azure CLI Login (Azure Container Registry)
       with:
         client-id: ${{ inputs.containerRegistryAzureClientId }}
         tenant-id: ${{ inputs.containerRegistryAzureTenantId }}
