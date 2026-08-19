@@ -275,11 +275,11 @@ runs:
     - name: Get ACR access token
       if: ${{ inputs.withPublish == 'true' && inputs.withRelease == 'true' && inputs.containerRegistry != '' && inputs.containerRegistryAzureClientId != '' && inputs.containerRegistryAzureTenantId != '' }}
       id: acr-token
-      shell: bash
+      shell: pwsh
       run: |
-        ACR_TOKEN=$(az acr login --name ${{ inputs.containerRegistry }} --expose-token --output tsv --query accessToken)
-        echo "::add-mask::$ACR_TOKEN" # mask the token in workflow logs
-        echo "token=$ACR_TOKEN" >> "$GITHUB_OUTPUT"
+        $acrToken = az acr login --name ${{ inputs.containerRegistry }} --expose-token --output tsv --query accessToken
+        Write-Output "::add-mask::$acrToken" # mask the token in workflow logs
+        "token=$acrToken" >> $env:GITHUB_OUTPUT
 
     - name: Docker login
       if: ${{ inputs.withPublish == 'true' && inputs.withRelease == 'true' && inputs.containerRegistry != '' && inputs.containerRegistryAzureClientId != '' && inputs.containerRegistryAzureTenantId != '' }}
