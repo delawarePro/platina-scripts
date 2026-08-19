@@ -1,7 +1,5 @@
-# Not yet implemented: Docker login & push support.
 # OOTB features in Azure DevOps but not in GitHub:
 #  - UI for test & code coverage results.
-#  - Azure Artifacts feeds requires PAT tokens.
 #  - Step injection for before/after test & release steps.
 #     There is however a workaround by providing a composite action file instead. (See 'ci-beforeTestsSteps' below)
 name: "DotNet CI"
@@ -95,13 +93,26 @@ inputs:
     required: false
     default: ""
 
+  containerRegistry:
+    description: "Optional container registry login server to push containers to."
+    required: false
+    default: ""
+  containerRegistryAzureClientId:
+    description: "Optional Azure Client ID for authenticating with Azure Container Registry."
+    required: false
+    default: ""
+  containerRegistryAzureTenantId:
+    description: "Optional Azure Tenant ID for authenticating with Azure Container Registry."
+    required: false
+    default: ""
+
 runs:
   using: composite
   steps:
     # Login in Azure CLI context provided with a service principal.
-    - uses: azure/login@v1
+    - uses: azure/login@v3
       if: ${{ inputs.azureClientId != '' && inputs.azureTenantId != '' }}
-      name: Azure CLI Login
+      name: Azure CLI Login (Azure Artifacts)
       with:
         client-id: ${{ inputs.azureClientId }}
         tenant-id: ${{ inputs.azureTenantId }}
@@ -250,6 +261,54 @@ runs:
         # Remark: the PAT token requires more access than just Azure Artifacts
         # See: https://github.com/marketplace/actions/publish-symbols
         personalAccessToken: ${{ inputs.nuGetSymbolsToken }}
+
+      # Login in Azure CLI context and fetch token to use as password for Docker login.
+      # See: https://github.com/docker/login-action#openid-connect-oidc
+    - uses: azure/login@v3
+      if: ${{ inputs.withPublish == 'true' && inputs.withRelease == 'true' && inputs.containerRegistry != '' && inputs.containerRegistryAzureClientId != '' && inputs.containerRegistryAzureTenantId != '' }}
+      name: Azure CLI Login (Azure Container Registry)
+      with:
+        client-id: ${{ inputs.containerRegistryAzureClientId }}
+        tenant-id: ${{ inputs.containerRegistryAzureTenantId }}
+        allow-no-subscriptions: true
+
+    - name: Get ACR access token
+      if: ${{ inputs.withPublish == 'true' && inputs.withRelease == 'true' && inputs.containerRegistry != '' && inputs.containerRegistryAzureClientId != '' && inputs.containerRegistryAzureTenantId != '' }}
+      id: acr-token
+      shell: pwsh
+      run: |
+        $acrToken = az acr login --name ${{ inputs.containerRegistry }} --expose-token --output tsv --query accessToken
+        Write-Output "::add-mask::$acrToken" # mask the token in workflow logs
+        "token=$acrToken" >> $env:GITHUB_OUTPUT
+
+    - name: Docker login
+      if: ${{ inputs.withPublish == 'true' && inputs.withRelease == 'true' && inputs.containerRegistry != '' && inputs.containerRegistryAzureClientId != '' && inputs.containerRegistryAzureTenantId != '' }}
+      uses: docker/login-action@v4
+      with:
+        registry: ${{ inputs.containerRegistry }}
+        username: 00000000-0000-0000-0000-000000000000
+        password: ${{ steps.acr-token.outputs.token }}
+
+    - name: Docker push
+      if: ${{ inputs.withPublish == 'true' && inputs.withRelease == 'true' && inputs.containerRegistry != '' && inputs.containerRegistryAzureClientId != '' && inputs.containerRegistryAzureTenantId != '' }}
+      shell: pwsh
+      run: |
+        $registry = "${{ inputs.containerRegistry }}"
+        Write-Host "Using registry $registry"
+
+        Get-ChildItem "${{ runner.temp }}/packages" -Recurse -Filter container.json |
+          ForEach-Object {
+            $container = Get-Content $_.FullName | ConvertFrom-Json
+            $tag = "$registry/$($container.repository):$($container.version)"
+
+            Write-Host "Pushing $tag"
+            &docker tag "$($container.repository):$($container.version)" "$tag"
+            &docker push "$tag"
+
+            # Add registry to container.json
+            $container | Add-Member -MemberType NoteProperty -Name registry -Value $registry -Force
+            $container | ConvertTo-Json | Out-File -FilePath $_.FullName -Force
+          }
 
     - name: Add publish output to pipeline artifacts
       if: ${{ inputs.withPublish == 'true' && inputs.withRelease == 'true' }}
