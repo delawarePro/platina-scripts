@@ -1,6 +1,5 @@
 # OOTB features in Azure DevOps but not in GitHub:
 #  - UI for test & code coverage results.
-#  - Azure Artifacts feeds requires PAT tokens.
 #  - Step injection for before/after test & release steps.
 #     There is however a workaround by providing a composite action file instead. (See 'ci-beforeTestsSteps' below)
 name: "DotNet CI"
@@ -98,14 +97,6 @@ inputs:
     description: "Optional container registry login server to push containers to."
     required: false
     default: ""
-  # containerRegistryUsername:
-  #   description: "Optional container registry username for authentication."
-  #   required: false
-  #   default: ""
-  # containerRegistryPassword:
-  #   description: "Optional container registry password for authentication."
-  #   required: false
-  #   default: ""
   containerRegistryAzureClientId:
     description: "Optional Azure Client ID for authenticating with Azure Container Registry."
     required: false
@@ -271,7 +262,7 @@ runs:
         # See: https://github.com/marketplace/actions/publish-symbols
         personalAccessToken: ${{ inputs.nuGetSymbolsToken }}
 
-      # Login in Azure CLI use use token as password for Docker login.
+      # Login in Azure CLI context and fetch token to use as password for Docker login.
       # See: https://github.com/docker/login-action#openid-connect-oidc
     - uses: azure/login@v3
       if: ${{ inputs.withPublish == 'true' && inputs.withRelease == 'true' && inputs.containerRegistry != '' && inputs.containerRegistryAzureClientId != '' && inputs.containerRegistryAzureTenantId != '' }}
